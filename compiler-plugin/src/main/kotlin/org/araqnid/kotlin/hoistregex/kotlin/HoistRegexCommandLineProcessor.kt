@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 
 @AutoService(CommandLineProcessor::class)
 class HoistRegexCommandLineProcessor : CommandLineProcessor {
-    override val pluginId: String = "hoist-regex"
+    override val pluginId: String = "org.araqnid.hoist-regex"
 
     override val pluginOptions: Collection<AbstractCliOption> = listOf(
         CliOption("enabled", "true|false", "whether plugin is enabled")

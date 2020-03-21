@@ -14,7 +14,7 @@ class HoistRegexSubPlugin : KotlinGradleSubplugin<AbstractCompile> {
     override fun isApplicable(project: Project, task: AbstractCompile): Boolean =
         project.plugins.hasPlugin(HoistRegexPlugin::class.java)
 
-    override fun getCompilerPluginId(): String = "hoist-regex"
+    override fun getCompilerPluginId(): String = "org.araqnid.hoist-regex"
 
     override fun getPluginArtifact(): SubpluginArtifact =
         SubpluginArtifact("org.araqnid.hoist-regex", "kotlin-hoist-regex-plugin", "0.0.1")
