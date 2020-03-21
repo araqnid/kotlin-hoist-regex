@@ -31,6 +31,7 @@ tasks {
     val test by getting(Test::class) {
         inputs.dir("src/testInput/kotlin")
         val testInputCompileClasspath by configurations.getting
+        inputs.property("testInputCompileClasspath", testInputCompileClasspath)
         doFirst {
             environment("TEST_INPUT_COMPILE_CLASSPATH", testInputCompileClasspath.joinToString(":"))
         }
