@@ -30,10 +30,14 @@ class HoistRegexTest {
     fun `test code compiled with plugin is manipulated`() {
         KotlinToJVMBytecodeCompiler.compileBunchOfSources(compilerEnvironment.environment)
         val methodInstructions = summariseMethodInstructions("testInput.Example")
-        val someMethodInstructions = methodInstructions["someMethod"]?.joinToString(", ") ?: ""
-        assertFalse(someMethodInstructions.indexOf(
-            "new class kotlin/text/Regex, dup , ldc String \\\\S+, invokespecial Method kotlin/text/Regex.\"<init>\":(Ljava/lang/String;)V") > 0,
-            "someMethod should not contain Regex(...) creation sequence: $someMethodInstructions\n\n" + compilerEnvironment.runJavap("testInput.Example"))
+        val someMethodInstructions = methodInstructions["someMethod"]?.joinToString("\n") ?: ""
+        assertFalse(someMethodInstructions.contains("""
+            |new class kotlin/text/Regex
+            |dup 
+            |ldc String \\S+
+            |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
+        """.trimMargin()),
+            "someMethod should not contain Regex(...) creation sequence\n\n" + compilerEnvironment.runJavap("testInput.Example"))
     }
 
     private fun summariseMethodInstructions(targetClass: String): Map<String, List<String>> {
