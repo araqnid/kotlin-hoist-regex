@@ -10,12 +10,16 @@ import org.jetbrains.kotlin.com.intellij.openapi.Disposable
 import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.stream.Collectors
 
 class HoistRegexTest {
     @get:Rule
@@ -28,6 +32,7 @@ class HoistRegexTest {
 
     class CompilerEnvironmentRule : TestRule {
         private lateinit var description: Description
+        private lateinit var tempDirectory: File
         private val testMethodName by lazy { description.methodName!! }
         private val testClassName by lazy { description.className!! }
         private val testName by lazy { "$testClassName.$testMethodName" }
@@ -36,15 +41,40 @@ class HoistRegexTest {
             return object : Statement() {
                 override fun evaluate() {
                     this@CompilerEnvironmentRule.description = description
-                    base.evaluate()
+                    createTempDirectory()
+                    try {
+                        base.evaluate()
+                    } finally {
+                        deleteTempDirectory()
+                    }
                 }
             }
+        }
+
+        private fun createTempDirectory() {
+            tempDirectory = Files.createTempDirectory("kotlin-hoist-regex-test").toFile()
+        }
+
+        private fun deleteTempDirectory() {
+            deleteRecursively(tempDirectory.toPath())
+        }
+
+        private fun deleteRecursively(path: Path) {
+            for (member in Files.list(path).use { it.collect(Collectors.toList()) }) {
+                when {
+                    Files.isSymbolicLink(member) || Files.isRegularFile(member) -> Files.delete(member)
+                    Files.isDirectory(member) -> deleteRecursively(member)
+                    else -> error("Unknown type of file: $member")
+                }
+            }
+            Files.delete(path)
         }
 
         val configuration by lazy {
             CompilerConfiguration().apply {
                 put(CommonConfigurationKeys.MODULE_NAME, "test-module")
                 put(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY, TestingMessageCollector)
+                put(JVMConfigurationKeys.OUTPUT_DIRECTORY, tempDirectory)
 
                 val classpathString =
                     System.getenv("TEST_INPUT_COMPILE_CLASSPATH") ?: error("TEST_INPUT_COMPILE_CLASSPATH not specified")
