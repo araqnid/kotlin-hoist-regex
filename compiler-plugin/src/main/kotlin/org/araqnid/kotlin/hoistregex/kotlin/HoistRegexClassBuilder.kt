@@ -20,6 +20,8 @@ class HoistRegexClassBuilder(private val delegateBuilder: ClassBuilder) : Delega
         exceptions: Array<out String>?
     ): MethodVisitor {
         val original = super.newMethod(origin, access, name, desc, signature, exceptions)
+        if (name == "<clinit>")
+            return original
         return object : MethodVisitor(Opcodes.ASM5, original) {
             override fun visitTypeInsn(opcode: Int, type: String?) {
                 when (opcode) {
