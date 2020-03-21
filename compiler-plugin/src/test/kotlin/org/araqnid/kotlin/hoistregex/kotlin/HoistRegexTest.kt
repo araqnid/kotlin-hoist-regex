@@ -20,6 +20,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
+import kotlin.test.assertFalse
 
 class HoistRegexTest {
     @get:Rule
@@ -28,19 +29,33 @@ class HoistRegexTest {
     @Test
     fun `test code compiled with plugin is manipulated`() {
         KotlinToJVMBytecodeCompiler.compileBunchOfSources(compilerEnvironment.environment)
-        val process = Runtime.getRuntime().exec(
-            arrayOf(
-                "javap",
-                "-c",
-                "-classpath",
-                compilerEnvironment.tempDirectory.toString(),
-                "testInput.Example"
-            )
-        )
-        process.inputStream.bufferedReader().lineSequence().forEach { line ->
-            println("javap: $line")
+        val methodInstructions = summariseMethodInstructions("testInput.Example")
+        val someMethodInstructions = methodInstructions["someMethod"]?.joinToString(", ") ?: ""
+        assertFalse(someMethodInstructions.indexOf(
+            "new class kotlin/text/Regex, dup , ldc String \\\\S+, invokespecial Method kotlin/text/Regex.\"<init>\":(Ljava/lang/String;)V") > 0,
+            "someMethod should not contain Regex(...) creation sequence: $someMethodInstructions\n\n" + compilerEnvironment.runJavap("testInput.Example"))
+    }
+
+    private fun summariseMethodInstructions(targetClass: String): Map<String, List<String>> {
+        val summarisedInstructions = mutableMapOf<String, List<String>>()
+        val lineIterator = compilerEnvironment.runJavap(targetClass).lines().iterator()
+        val methodPattern = Regex(""" {2}(?:[a-z]+ )*([a-zA-Z_$][a-zA-Z_0-9$]*)\((.+)\);""")
+        val instructionPattern = Regex(""" *\d+: ([a-zA-Z_$][a-zA-Z_0-9$]*)\s*[#0-9, ]*\s*(?:// (.+))?""")
+        while (lineIterator.hasNext()) {
+            val outerLine = lineIterator.next()
+            val methodMatch = methodPattern.matchEntire(outerLine) ?: continue
+            val (methodName, signature) = methodMatch.destructured
+            val methodInstructions = mutableListOf<String>()
+            while (lineIterator.hasNext()) {
+                val innerLine = lineIterator.next()
+                val instructionMatch = instructionPattern.matchEntire(innerLine) ?: continue
+                val instruction = instructionMatch.groupValues[1]
+                val comment = if (instructionMatch.groupValues.size > 2) instructionMatch.groupValues[2] else null
+                methodInstructions += if (comment != null) "$instruction $comment" else instruction
+            }
+            summarisedInstructions[methodName] = methodInstructions
         }
-        process.waitFor()
+        return summarisedInstructions
     }
 
     class CompilerEnvironmentRule : TestRule {
@@ -102,6 +117,22 @@ class HoistRegexTest {
 
         val environment by lazy {
             KotlinCoreEnvironment.createForTests(testDisposable, configuration, EnvironmentConfigFiles.JVM_CONFIG_FILES)
+        }
+
+        fun runJavap(targetClass: String): String {
+            val process = Runtime.getRuntime().exec(
+                arrayOf(
+                    "javap",
+                    "-c",
+                    "-classpath",
+                    tempDirectory.toString(),
+                    targetClass
+                )
+            )
+            val errorLines = process.errorStream.bufferedReader().readLines()
+            val text = process.inputStream.bufferedReader().readText()
+            check(process.waitFor() == 0) { "javap failed\n${errorLines.joinToString("\n")}" }
+            return text
         }
 
         inner class DisposableImpl : Disposable {
