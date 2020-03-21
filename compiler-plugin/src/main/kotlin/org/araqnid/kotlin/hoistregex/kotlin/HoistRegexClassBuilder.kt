@@ -26,9 +26,12 @@ class HoistRegexClassBuilder(private val delegateBuilder: ClassBuilder) : Delega
             override fun visitTypeInsn(opcode: Int, type: String?) {
                 when (opcode) {
                     NEW -> {
-                        InstructionAdapter(this).apply {
-                            if (type == "kotlin/text/Regex") {
+                        if (type == "kotlin/text/Regex") {
+                            InstructionAdapter(this).apply {
+                                getstatic(thisName, "\$regex\$0", "Lkotlin/text/Regex;")
+                                pop()
                                 println("seen Regex creation: origin.descriptor=${origin.descriptor} access=$access method=$name type=$type")
+                                println("thisName=$thisName")
                             }
                         }
                     }

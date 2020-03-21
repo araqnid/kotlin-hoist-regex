@@ -28,11 +28,24 @@ class HoistRegexTest {
     @Test
     fun `test code compiled with plugin is manipulated`() {
         KotlinToJVMBytecodeCompiler.compileBunchOfSources(compilerEnvironment.environment)
+        val process = Runtime.getRuntime().exec(
+            arrayOf(
+                "javap",
+                "-c",
+                "-classpath",
+                compilerEnvironment.tempDirectory.toString(),
+                "testInput.Example"
+            )
+        )
+        process.inputStream.bufferedReader().lineSequence().forEach { line ->
+            println("javap: $line")
+        }
+        process.waitFor()
     }
 
     class CompilerEnvironmentRule : TestRule {
         private lateinit var description: Description
-        private lateinit var tempDirectory: File
+        lateinit var tempDirectory: File
         private val testMethodName by lazy { description.methodName!! }
         private val testClassName by lazy { description.className!! }
         private val testName by lazy { "$testClassName.$testMethodName" }
