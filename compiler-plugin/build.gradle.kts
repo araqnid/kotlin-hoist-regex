@@ -13,6 +13,10 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+configurations {
+    create("asmifier")
+}
+
 sourceSets {
     create("testInput")
 }
@@ -25,6 +29,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     testImplementation(kotlin("test-junit"))
     testImplementation(kotlin("compiler-embeddable"))
+    "asmifier"("org.ow2.asm:asm-util:7.3.1")
 }
 
 tasks {
@@ -35,5 +40,14 @@ tasks {
         doFirst {
             environment("TEST_INPUT_COMPILE_CLASSPATH", testInputCompileClasspath.joinToString(":"))
         }
+    }
+
+    val asmifyTestInputs by creating(JavaExec::class) {
+        val asmifier by configurations.getting
+        dependsOn("compileTestInputKotlin")
+        inputs.file("build/classes/kotlin/testInput/testInput/Example.class")
+        classpath = files(asmifier)
+        main = "org.objectweb.asm.util.ASMifier"
+        args = listOf(file("build/classes/kotlin/testInput/testInput/Example.class").toString())
     }
 }
