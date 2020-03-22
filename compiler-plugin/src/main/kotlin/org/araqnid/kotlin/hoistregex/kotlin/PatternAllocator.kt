@@ -6,7 +6,7 @@ class PatternAllocator {
     val all: List<Allocated>
         get() = allocated.values.flatten()
 
-    fun allocate(className: String, pattern: String): Allocated {
+    fun allocate(className: String, pattern: Pattern): Allocated {
         val forClass = allocated.getOrPut(className) { mutableListOf() }
         val symbol = "\$pattern\$${forClass.size}"
         val allocated = Allocated(className, symbol, pattern)
@@ -18,5 +18,6 @@ class PatternAllocator {
         return allocated[className] ?: emptyList()
     }
 
-    data class Allocated(val className: String, val symbol: String, val pattern: String)
+    data class Pattern(val source: String, val options: Set<RegexOption>)
+    data class Allocated(val className: String, val symbol: String, val pattern: Pattern)
 }

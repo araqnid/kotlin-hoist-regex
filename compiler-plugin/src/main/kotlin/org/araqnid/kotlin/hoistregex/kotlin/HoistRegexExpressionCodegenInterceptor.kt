@@ -24,8 +24,17 @@ class HoistRegexExpressionCodegenInterceptor(private val patternAllocator: Patte
             )
             clinitCodegen.v.anew(regexType)
             clinitCodegen.v.dup()
-            clinitCodegen.v.aconst(pattern)
-            clinitCodegen.v.invokespecial("kotlin/text/Regex", "<init>", "(Ljava/lang/String;)V", false)
+            clinitCodegen.v.aconst(pattern.source)
+            when (pattern.options.size) {
+                0 -> {
+                    clinitCodegen.v.invokespecial("kotlin/text/Regex", "<init>", "(Ljava/lang/String;)V", false)
+                }
+                1 -> {
+                    clinitCodegen.v.getstatic("kotlin/text/RegexOption", pattern.options.first().name, "Lkotlin/text/RegexOption;")
+                    clinitCodegen.v.invokespecial("kotlin/text/Regex", "<init>", "(Ljava/lang/String;Lkotlin/text/RegexOption;)V", false)
+                }
+                else -> TODO()
+            }
             clinitCodegen.v.putstatic(className, symbol, regexType.descriptor)
         }
     }

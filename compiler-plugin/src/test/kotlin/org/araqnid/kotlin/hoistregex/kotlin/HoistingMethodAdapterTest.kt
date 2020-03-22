@@ -33,11 +33,10 @@ class HoistingMethodAdapterTest {
         )
         assertEquals(
             patternAllocator.all,
-            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", "variablePattern"))
+            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", PatternAllocator.Pattern("variablePattern", emptySet())))
         )
     }
 
-    @Ignore
     @Test
     fun `handles regex created with single option`() {
         val (allText, patternAllocator) = produceAndDisassemble(::originalSomeMethodUsingSingleOption)
@@ -57,7 +56,7 @@ class HoistingMethodAdapterTest {
         )
         assertEquals(
             patternAllocator.all,
-            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", "variablePattern"))
+            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", PatternAllocator.Pattern("variablePatternWithOption", setOf(RegexOption.IGNORE_CASE))))
         )
     }
 
@@ -81,7 +80,7 @@ class HoistingMethodAdapterTest {
         )
         assertEquals(
             patternAllocator.all,
-            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", "variablePattern"))
+            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", PatternAllocator.Pattern("variablePatternWithMultipleOptions", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))))
         )
     }
 

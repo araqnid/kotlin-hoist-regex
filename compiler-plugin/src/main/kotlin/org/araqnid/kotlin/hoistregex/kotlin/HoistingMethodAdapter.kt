@@ -24,7 +24,27 @@ class HoistingMethodAdapter(
     private val patternAllocator: PatternAllocator,
     private val original: MethodVisitor
 ) : MethodVisitor(Opcodes.ASM5, original) {
-    private var currentExpectations: Expectations<String>? = null
+    private var currentExpectations: Expectations<PatternAllocator.Pattern>? = null
+
+    companion object {
+        private const val dup = "visitInsn:${Opcodes.DUP}"
+        private const val ldcPrefix = "visitLdcInsn:"
+        private const val constructor = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false"
+        private const val constructorSingleOption = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;Lkotlin/text/RegexOption;)V:false"
+        private val getOptionPattern = Regex("visitFieldInsn:${Opcodes.GETSTATIC}:kotlin/text/RegexOption:([A-Z_]+):Lkotlin/text/RegexOption;")
+        suspend fun MatcherScope<String>.matchRegexInstructions(): PatternAllocator.Pattern? {
+            if (take() != dup) return null
+            val patternInsn = take()
+            if (!patternInsn.startsWith(ldcPrefix)) return null
+            val pattern = patternInsn.substring(ldcPrefix.length)
+            val optionsOrConstructor = take()
+            if (optionsOrConstructor == constructor) return PatternAllocator.Pattern(pattern, emptySet())
+            val getOptionMatch = getOptionPattern.matchEntire(optionsOrConstructor) ?: return null
+            val option = getOptionMatch.groupValues[1]
+            if (take() != constructorSingleOption) return null
+            return PatternAllocator.Pattern(pattern, setOf(RegexOption.valueOf(option)))
+        }
+    }
 
     override fun visitTypeInsn(opcode: Int, type: String) {
         if (shiftExpectations("visitTypeInsn:$opcode:$type") { visitTypeInsn(opcode, type) })
@@ -34,13 +54,7 @@ class HoistingMethodAdapter(
                 if (type == "kotlin/text/Regex") {
                     val reapply: MethodVisitor.() -> Unit = { visitTypeInsn(opcode, type) }
                     currentExpectations = Expectations(
-                        node = matchSequence {
-                            if (take() != "visitInsn:${Opcodes.DUP}") return@matchSequence null
-                            val patternInsn = take()
-                            if (!patternInsn.startsWith("visitLdcInsn:")) return@matchSequence null
-                            if (take() != "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false") return@matchSequence null
-                            patternInsn.substring("visitLdcInsn:".length)
-                        },
+                        node = matchSequence { matchRegexInstructions() },
                         onMismatch = listOf(reapply),
                         onMet = { pattern ->
                             InstructionAdapter(this).apply {
@@ -239,8 +253,10 @@ class HoistingMethodAdapter(
         super.visitAttribute(attribute)
     }
 
-    override fun visitFieldInsn(opcode: Int, owner: String?, name: String?, descriptor: String?) {
-        failedExpectation()
+    override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
+        if (shiftExpectations("visitFieldInsn:$opcode:$owner:$name:$descriptor")
+            { visitFieldInsn(opcode, owner, name, descriptor) })
+            return
         super.visitFieldInsn(opcode, owner, name, descriptor)
     }
 
