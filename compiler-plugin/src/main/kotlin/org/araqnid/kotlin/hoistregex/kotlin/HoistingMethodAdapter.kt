@@ -11,15 +11,12 @@ import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 import java.util.EnumSet
 
 // Want to convert a sequence like this:
-//       11: new           #19                 // class kotlin/text/Regex
+//      11: new           #19                 // class kotlin/text/Regex
 //      14: dup
 //      15: ldc           #21                 // String \\S+
 //      17: invokespecial #25                 // Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
 // into:
-//    new   // class kotlin/text/Regex
 //    getstatic // Field $regex$whatever on theClass
-//    invokespecial
-
 class HoistingMethodAdapter(
     private val className: String,
     private val patternAllocator: PatternAllocator,
@@ -31,7 +28,7 @@ class HoistingMethodAdapter(
         private const val dup = "visitInsn:${Opcodes.DUP}"
         private const val aastore = "visitInsn:${Opcodes.AASTORE}"
         private const val ldcPrefix = "visitLdcInsn:"
-        private const val constructor = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false"
+        private const val constructorNoOptions = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false"
         private const val constructorSingleOption = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;Lkotlin/text/RegexOption;)V:false"
         private const val constructorMultipleOptions = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;Ljava/util/Set;)V:false"
         private val getOptionPattern = Regex("visitFieldInsn:${Opcodes.GETSTATIC}:kotlin/text/RegexOption:([A-Z_]+):Lkotlin/text/RegexOption;")
@@ -48,16 +45,27 @@ class HoistingMethodAdapter(
             }
         }
 
+        // match instructions after "NEW kotlin/text/Regex" up to and including the constructor invocation,
+        // extracting the pattern and options.
+        //
+        // Simple case with no options:
+        //    DUP
+        //    LDC "variablePattern"
+        //    INVOKESPECIAL kotlin/text/Regex.<init> (Ljava/lang/String;)V
+        // Simple case with single option:
+        //    DUP
+        //    LDC "variablePatternWithOption"
+        //    GETSTATIC kotlin/text/RegexOption.IGNORE_CASE : Lkotlin/text/RegexOption;
+        //    INVOKESPECIAL kotlin/text/Regex.<init> (Ljava/lang/String;Lkotlin/text/RegexOption;)V
         suspend fun MatcherScope<String>.matchRegexInstructions(): PatternAllocator.Pattern? {
             if (takeInsn() != dup) return null
             val patternInsn = takeInsn()
             if (!patternInsn.startsWith(ldcPrefix)) return null
             val pattern = patternInsn.substring(ldcPrefix.length)
             val optionsOrConstructor = takeInsn()
-            if (optionsOrConstructor == constructor) return PatternAllocator.Pattern(pattern, emptySet())
+            if (optionsOrConstructor == constructorNoOptions) return PatternAllocator.Pattern(pattern, emptySet())
             val option = decodeGetOption(optionsOrConstructor)
             if (option != null) {
-                // single option
                 if (takeInsn() != constructorSingleOption) return null
                 return PatternAllocator.Pattern(pattern, setOf(option))
             }
@@ -136,6 +144,9 @@ class HoistingMethodAdapter(
         }
     }
 
+    // Detect the creation of a Regex and start matching instructions after it:
+    //     NEW kotlin/text/Regex
+    // If the matcher rejects, still need to reapply the NEW instruction
     override fun visitTypeInsn(opcode: Int, type: String) {
         if (shiftExpectations("visitTypeInsn:$opcode:$type") { visitTypeInsn(opcode, type) })
             return
