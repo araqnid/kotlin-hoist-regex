@@ -34,8 +34,12 @@ class HoistingMethodAdapterTest {
     @Test
     fun `extracts regex creations and assigns symbols`() {
         val textifier = Textifier()
-        val allocatedPatterns = mutableMapOf<String, String>()
-        val hostingAdapter = HoistingMethodAdapter("testInputs.Example", allocatedPatterns, TraceMethodVisitor(textifier))
+        val patternAllocator = PatternAllocator()
+        val hostingAdapter = HoistingMethodAdapter(
+            "testInputs.Example",
+            patternAllocator,
+            TraceMethodVisitor(textifier)
+        )
         visitOriginalSomeMethod(hostingAdapter)
         val allText = textifier.getText().joinToString("")
         assertFalse(allText.contains("""
@@ -44,7 +48,7 @@ class HoistingMethodAdapterTest {
         assertTrue(allText.contains("""
                 |    GETSTATIC testInputs.Example.${'$'}pattern${'$'}0 : Lkotlin/text/Regex;
                 """.trimMargin()), "Method produced:\n\n$allText")
-        assertEquals(allocatedPatterns, mapOf("\$pattern\$0" to "variablePattern"))
+        assertEquals(patternAllocator.all, listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", "variablePattern")))
     }
 
     private fun visitOriginalSomeMethod(methodVisitor: MethodVisitor) {

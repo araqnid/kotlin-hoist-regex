@@ -14,16 +14,16 @@ class HoistRegexComponentRegistrar : ComponentRegistrar {
         if (configuration[KEY_ENABLED] == false)
             return
 
+        val patternAllocator = PatternAllocator()
+
         ClassBuilderInterceptorExtension.registerExtension(
             project,
-            HoistRegexClassGenerationInterceptor(
-            )
+            HoistRegexClassGenerationInterceptor(patternAllocator)
         )
 
         ExpressionCodegenExtension.registerExtension(
             project,
-            HoistRegexExpressionCodegenInterceptor(
-            )
+            HoistRegexExpressionCodegenInterceptor(patternAllocator)
         )
     }
 }

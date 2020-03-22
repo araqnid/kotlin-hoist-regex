@@ -4,7 +4,7 @@ import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
-class HoistingMethodAdapter(private val className: String, private val allocatedPatterns: MutableMap<String, String>, private val original: MethodVisitor) : MethodVisitor(
+class HoistingMethodAdapter(private val className: String, private val patternAllocator: PatternAllocator, private val original: MethodVisitor) : MethodVisitor(
     Opcodes.ASM5, original
 ) {
     private var expectationNode: Node.Expectation? = null
@@ -23,9 +23,8 @@ class HoistingMethodAdapter(private val className: String, private val allocated
                     onExpectationsMet = { pattern ->
 
                         InstructionAdapter(this).apply {
-                            val symbol = "\$pattern\$${allocatedPatterns.size}"
-                            allocatedPatterns[symbol] = pattern
-                            getstatic(className, symbol, "Lkotlin/text/Regex;")
+                            val allocated = patternAllocator.allocate(className, pattern)
+                            getstatic(className, allocated.symbol, "Lkotlin/text/Regex;")
                         }
                     }
                     return

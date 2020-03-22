@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class HoistRegexTest {
     @get:Rule
@@ -29,28 +30,58 @@ class HoistRegexTest {
     @Test
     fun `test code compiled with plugin is manipulated`() {
         KotlinToJVMBytecodeCompiler.compileBunchOfSources(compilerEnvironment.environment)
-        val methodInstructions = summariseMethodInstructions("testInput.Example")
+        val (methodInstructions, javapOutput) = summariseMethodInstructions("testInput.Example")
         val someMethodInstructions = methodInstructions["someMethod"]?.joinToString("\n") ?: ""
+        val constructorInstructions = methodInstructions["testInput.Example"]?.joinToString("\n") ?: ""
         assertFalse(someMethodInstructions.contains("""
             |new class kotlin/text/Regex
             |dup 
             |ldc String variablePattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
         """.trimMargin()),
-            "someMethod should not contain Regex(...) creation sequence at variable initialisation\n\n" + compilerEnvironment.runJavap("testInput.Example"))
-        assertFalse(someMethodInstructions.contains("""
+            "someMethod should not contain Regex(...) creation sequence at variable initialisation" +
+                    "\n\nMethod instructions:\n$someMethodInstructions\n\n$javapOutput"
+        )
+        assertFalse(constructorInstructions.contains("""
             |new class kotlin/text/Regex
             |dup 
             |ldc String propertyPattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
         """.trimMargin()),
-            "someMethod should not contain Regex(...) creation sequence at property initialisation\n\n" + compilerEnvironment.runJavap("testInput.Example"))
+            "constructor should not contain Regex(...) creation sequence at property initialisation" +
+                    "\n\nConstructor instructions:\n$constructorInstructions\n\n$javapOutput"
+        )
+        assertTrue(someMethodInstructions.contains("""
+            |getstatic Field ${'$'}pattern${'$'}0:Lkotlin/text/Regex;
+        """.trimMargin()),
+            "someMethod should contain cached regex access sequence at variable initialisation" +
+                    "\n\nMethod instructions:\n$someMethodInstructions\n\n$javapOutput"
+        )
+        assertTrue(constructorInstructions.contains("""
+            |getstatic Field ${'$'}pattern${'$'}1:Lkotlin/text/Regex;
+        """.trimMargin()),
+            "constructor should contain cached regex access sequence at property initialisation" +
+                    "\n\nConstructor instructions:\n$constructorInstructions\n\n$javapOutput"
+        )
+        assertTrue(javapOutput.contains("""
+            |private static final kotlin.text.Regex ${'$'}pattern${'$'}0
+        """.trimMargin()),
+            "class should contain static field definition" +
+                    "\n\n$javapOutput"
+        )
+        assertTrue(javapOutput.contains("""
+            |private static final kotlin.text.Regex ${'$'}pattern${'$'}1
+        """.trimMargin()),
+            "class should contain static field definition" +
+                    "\n\n$javapOutput"
+        )
     }
 
-    private fun summariseMethodInstructions(targetClass: String): Map<String, List<String>> {
+    private fun summariseMethodInstructions(targetClass: String): Pair<Map<String, List<String>>, String> {
         val summarisedInstructions = mutableMapOf<String, List<String>>()
-        val lineIterator = compilerEnvironment.runJavap(targetClass).lines().iterator()
-        val methodPattern = Regex(""" {2}(?:[a-z]+ )*([a-zA-Z_$][a-zA-Z_0-9$]*)\((.+)\);""")
+        val javapOutput = compilerEnvironment.runJavap(targetClass)
+        val lineIterator = javapOutput.lines().iterator()
+        val methodPattern = Regex(""" {2}(?:[a-z]+ )*([a-zA-Z_$][a-zA-Z_0-9$.]*)\((.*)\);""")
         val instructionPattern = Regex(""" *\d+: ([a-zA-Z_$][a-zA-Z_0-9$]*)\s*[#0-9, ]*\s*(?:// (.+))?""")
         while (lineIterator.hasNext()) {
             val outerLine = lineIterator.next()
@@ -59,6 +90,7 @@ class HoistRegexTest {
             val methodInstructions = mutableListOf<String>()
             while (lineIterator.hasNext()) {
                 val innerLine = lineIterator.next()
+                if (innerLine.isBlank()) break
                 val instructionMatch = instructionPattern.matchEntire(innerLine) ?: continue
                 val instruction = instructionMatch.groupValues[1]
                 val comment = if (instructionMatch.groupValues.size > 2) instructionMatch.groupValues[2] else null
@@ -66,7 +98,7 @@ class HoistRegexTest {
             }
             summarisedInstructions[methodName] = methodInstructions
         }
-        return summarisedInstructions
+        return summarisedInstructions to javapOutput
     }
 
     class CompilerEnvironmentRule : TestRule {
@@ -134,6 +166,7 @@ class HoistRegexTest {
             val process = Runtime.getRuntime().exec(
                 arrayOf(
                     "javap",
+                    "-p",
                     "-c",
                     "-classpath",
                     tempDirectory.toString(),

@@ -7,7 +7,8 @@ import org.jetbrains.kotlin.diagnostics.DiagnosticSink
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 
-class HoistRegexClassGenerationInterceptor : ClassBuilderInterceptorExtension {
+class HoistRegexClassGenerationInterceptor(private val patternAllocator: PatternAllocator) :
+    ClassBuilderInterceptorExtension {
     override fun interceptClassBuilderFactory(
         interceptedFactory: ClassBuilderFactory,
         bindingContext: BindingContext,
@@ -15,9 +16,7 @@ class HoistRegexClassGenerationInterceptor : ClassBuilderInterceptorExtension {
     ): ClassBuilderFactory {
         return object : ClassBuilderFactory by interceptedFactory {
             override fun newClassBuilder(origin: JvmDeclarationOrigin): ClassBuilder {
-                return HoistRegexClassBuilder(
-                    delegateBuilder = interceptedFactory.newClassBuilder(origin)
-                )
+                return HoistRegexClassBuilder(patternAllocator, delegateBuilder = interceptedFactory.newClassBuilder(origin))
             }
         }
     }
