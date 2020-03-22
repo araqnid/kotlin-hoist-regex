@@ -38,6 +38,12 @@ class Example {
         )
     }
 
+    fun someMethodUsingSamePatternTwice(input: String): Boolean {
+        val p1 = Regex("variablePattern")
+        val p2 = Regex("variablePattern")
+        return input.matches(p1) || input.matches(p2)
+    }
+
     companion object {
         // don't intercept this
         val staticPattern = Regex("""staticPattern""")

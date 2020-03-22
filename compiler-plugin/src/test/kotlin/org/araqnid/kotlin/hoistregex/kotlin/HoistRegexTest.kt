@@ -113,7 +113,7 @@ class HoistRegexTest {
             |dup
             |ldc String propertyPattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
-            |putstatic Field ${'$'}pattern${'$'}4:Lkotlin/text/Regex;
+            |putstatic Field ${'$'}pattern${'$'}3:Lkotlin/text/Regex;
         """.trimMargin()),
             "static initialiser should contain Regex(...) creation sequence for property initialisation" +
                     "\n\nInitialiser instructions:\n$staticInitialiserInstructions\n\n$javapOutput"
@@ -137,7 +137,7 @@ class HoistRegexTest {
                     "\n\nMethod instructions:\n$someMethodInstructions\n\n$javapOutput"
         )
         assertTrue(constructorInstructions.contains("""
-            |getstatic Field ${'$'}pattern${'$'}4:Lkotlin/text/Regex;
+            |getstatic Field ${'$'}pattern${'$'}3:Lkotlin/text/Regex;
         """.trimMargin()),
             "constructor should contain cached regex access sequence at property initialisation" +
                     "\n\nConstructor instructions:\n$constructorInstructions\n\n$javapOutput"

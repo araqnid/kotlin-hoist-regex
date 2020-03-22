@@ -3,6 +3,7 @@ package org.araqnid.kotlin.hoistregex.kotlin
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethod
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingLotsaOptions
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingMultipleOptions
+import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingSamePatternTwice
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingSingleOption
 import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.util.Textifier
@@ -102,6 +103,29 @@ class HoistingMethodAdapterTest {
         assertEquals(
             patternAllocator.all,
             listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", PatternAllocator.Pattern("variablePatternWithMultipleOptions", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))))
+        )
+    }
+
+    @Test
+    fun `reuses regex referenced multiple times`() {
+        val (allText, patternAllocator) = produceAndDisassemble(::originalSomeMethodUsingSamePatternTwice)
+        assertFalse(
+            allText.contains(
+                """
+                |    NEW kotlin/text/Regex
+                """.trimMargin()
+            ), "Method produced:\n\n$allText"
+        )
+        assertTrue(
+            allText.contains(
+                """
+                |    GETSTATIC testInputs.Example.${'$'}pattern${'$'}0 : Lkotlin/text/Regex;
+                """.trimMargin()
+            ), "Method produced:\n\n$allText"
+        )
+        assertEquals(
+            patternAllocator.all,
+            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", PatternAllocator.Pattern("variablePattern", emptySet())))
         )
     }
 

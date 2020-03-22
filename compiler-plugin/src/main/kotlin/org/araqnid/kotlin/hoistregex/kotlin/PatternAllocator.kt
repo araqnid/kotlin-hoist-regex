@@ -8,6 +8,8 @@ class PatternAllocator {
 
     fun allocate(className: String, pattern: Pattern): Allocated {
         val forClass = allocated.getOrPut(className) { mutableListOf() }
+        val alreadyExists = forClass.find { it.pattern == pattern }
+        if (alreadyExists != null) return alreadyExists
         val symbol = "\$pattern\$${forClass.size}"
         val allocated = Allocated(className, symbol, pattern)
         forClass += allocated
