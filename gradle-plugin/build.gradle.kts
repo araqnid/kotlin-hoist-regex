@@ -4,6 +4,8 @@ plugins {
     kotlin("kapt")
 }
 
+the<BasePluginConvention>().archivesBaseName = "kotlin-host-regex-gradle-plugin"
+
 repositories {
     mavenCentral()
     jcenter()

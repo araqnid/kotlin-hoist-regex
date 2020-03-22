@@ -3,6 +3,8 @@ plugins {
     kotlin("kapt")
 }
 
+the<BasePluginConvention>().archivesBaseName = "kotlin-host-regex-kotlin-plugin"
+
 repositories {
     mavenCentral()
     jcenter()
