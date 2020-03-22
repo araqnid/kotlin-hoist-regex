@@ -294,7 +294,7 @@ class HoistRegexTest {
         }
 
         fun createClassLoader(): URLClassLoader {
-            return URLClassLoader("mangledTestOutput", arrayOf(tempDirectory.toURI().toURL()), Thread.currentThread().contextClassLoader)
+            return URLClassLoader(arrayOf(tempDirectory.toURI().toURL()), Thread.currentThread().contextClassLoader)
         }
 
         inner class DisposableImpl : Disposable {
