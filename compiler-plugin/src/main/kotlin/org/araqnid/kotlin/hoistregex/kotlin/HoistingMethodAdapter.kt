@@ -24,7 +24,7 @@ class HoistingMethodAdapter(
     private val patternAllocator: PatternAllocator,
     private val original: MethodVisitor
 ) : MethodVisitor(Opcodes.ASM5, original) {
-    private var currentExpectations: Expectations? = null
+    private var currentExpectations: Expectations<String>? = null
 
     override fun visitTypeInsn(opcode: Int, type: String) {
         if (shiftExpectations("visitTypeInsn:$opcode:$type") { visitTypeInsn(opcode, type) })
@@ -34,7 +34,13 @@ class HoistingMethodAdapter(
                 if (type == "kotlin/text/Regex") {
                     val reapply: MethodVisitor.() -> Unit = { visitTypeInsn(opcode, type) }
                     currentExpectations = Expectations(
-                        node = Node.Expectation.ExpectDup,
+                        node = matchSequence {
+                            if (take() != "visitInsn:${Opcodes.DUP}") return@matchSequence null
+                            val patternInsn = take()
+                            if (!patternInsn.startsWith("visitLdcInsn:")) return@matchSequence null
+                            if (take() != "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false") return@matchSequence null
+                            patternInsn.substring("visitLdcInsn:".length)
+                        },
                         onMismatch = listOf(reapply),
                         onMet = { pattern ->
                             InstructionAdapter(this).apply {
@@ -245,20 +251,19 @@ class HoistingMethodAdapter(
 
     private fun shiftExpectations(reality: String, op: MethodVisitor.() -> Unit): Boolean {
         val expectations = currentExpectations ?: return false
-        return when (val next = expectations.node.match(reality)) {
-            null -> {
+        return when (val matchResult = expectations.node(reality)) {
+            is SequenceMatchResult.Mismatch -> {
                 // not matched
                 failedExpectation()
                 false // not matched - don't eat instruction
             }
-            is Node.Terminal -> {
+            is SequenceMatchResult.Matched -> {
                 currentExpectations = null
-                expectations.onMet(next.value)
+                expectations.onMet(matchResult.value)
                 true // matched - eat instruction
             }
-            is Node.Expectation -> {
+            null -> {
                 currentExpectations = expectations.copy(
-                    node = next,
                     onMismatch = expectations.onMismatch + op
                 )
                 true // matched - eat instruction
@@ -274,38 +279,9 @@ class HoistingMethodAdapter(
         currentExpectations = null
     }
 
-    private data class Expectations(val node: Node.Expectation, val onMismatch: List<MethodVisitor.() -> Unit>, val onMet: (String) -> Unit)
-
-    private sealed class Node {
-        sealed class Expectation : Node() {
-            abstract fun match(input: String): Node?
-
-            object ExpectDup : Expectation() {
-                const val expected = "visitInsn:" + Opcodes.DUP
-                override fun match(input: String): Node? {
-                    return if (input == expected) ExpectPatternConstant else null
-                }
-            }
-
-            object ExpectPatternConstant : Expectation() {
-                const val prefix = "visitLdcInsn:"
-                override fun match(input: String): Node? {
-                    return if (input.startsWith(prefix)) ExpectConstructorInvocation(input.substring(prefix.length)) else null
-                }
-            }
-
-            class ExpectConstructorInvocation(val pattern: String) : Expectation() {
-                override fun match(input: String): Node? {
-                    return if (input == expected) Terminal(pattern) else null
-                }
-
-                companion object {
-                    const val expected =
-                        "visitMethodInsn:" + Opcodes.INVOKESPECIAL + ":kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false"
-                }
-            }
-        }
-
-        data class Terminal(val value: String) : Node()
-    }
+    private data class Expectations<T : Any>(
+        val node: SequenceMatcher<String, T>,
+        val onMismatch: List<MethodVisitor.() -> Unit>,
+        val onMet: (T) -> Unit
+    )
 }
