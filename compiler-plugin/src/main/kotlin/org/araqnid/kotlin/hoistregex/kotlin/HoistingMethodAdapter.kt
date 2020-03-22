@@ -37,6 +37,7 @@ class HoistingMethodAdapter(
         private val getOptionPattern = Regex("visitFieldInsn:${Opcodes.GETSTATIC}:kotlin/text/RegexOption:([A-Z_]+):Lkotlin/text/RegexOption;")
         private const val createRegexOptionArray = "visitTypeInsn:${Opcodes.ANEWARRAY}:kotlin/text/RegexOption"
         private const val invokeSetOf = "visitMethodInsn:${Opcodes.INVOKESTATIC}:kotlin/collections/SetsKt:setOf:([Ljava/lang/Object;)Ljava/util/Set;:false"
+        private const val bipushPrefix = "visitIntInsn:${Opcodes.BIPUSH}:"
 
         suspend fun MatcherScope<String>.takeInsn(): String {
             while (true) {
@@ -89,6 +90,13 @@ class HoistingMethodAdapter(
         //   AASTORE
         //   INVOKESTATIC kotlin/collections/SetsKt.setOf ([Ljava/lang/Object;)Ljava/util/Set;
         //   INVOKESPECIAL kotlin/text/Regex.<init> (Ljava/lang/String;Ljava/util/Set;)V
+        //
+        // if you specify more than 6 options, i.e. all of them (or duplicate ones), then there will be a slight variation
+        // above the ICONST_* range:
+        //   DUP
+        //   BIPUSH 6
+        //   GETSTATIC kotlin/text/RegexOption.IGNORE_CASE : Lkotlin/text/RegexOption;
+        //   AASTORE
         private suspend fun MatcherScope<String>.matchMultipleOptions(possibleSizeInsn: String): Set<RegexOption>? {
             decodeIntConstant(possibleSizeInsn) ?: return null
             if (takeInsn() != createRegexOptionArray) return null
@@ -115,7 +123,15 @@ class HoistingMethodAdapter(
                 "visitInsn:${Opcodes.ICONST_3}" -> 3
                 "visitInsn:${Opcodes.ICONST_4}" -> 4
                 "visitInsn:${Opcodes.ICONST_5}" -> 5
-                else -> null
+                "visitIntInsn:${Opcodes.BIPUSH}" -> 5
+                else -> {
+                    if (insn.startsWith(bipushPrefix)) {
+                        insn.substring(bipushPrefix.length).toInt()
+                    }
+                    else {
+                        null
+                    }
+                }
             }
         }
     }
@@ -203,7 +219,8 @@ class HoistingMethodAdapter(
     }
 
     override fun visitIntInsn(opcode: Int, operand: Int) {
-        failedExpectation()
+        if (shiftExpectations("visitIntInsn:$opcode:$operand") { visitIntInsn(opcode, operand) })
+            return
         super.visitIntInsn(opcode, operand)
     }
 

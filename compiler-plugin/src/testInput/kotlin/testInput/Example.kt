@@ -20,6 +20,24 @@ class Example {
         )
     }
 
+    fun someMethodUsingLotsaOptions(input: String): Boolean {
+        return input.matches(
+            Regex(
+                """variablePatternWithMultipleOptions""",
+                setOf(
+                    RegexOption.IGNORE_CASE,
+                    RegexOption.MULTILINE,
+                    RegexOption.IGNORE_CASE,
+                    RegexOption.MULTILINE,
+                    RegexOption.IGNORE_CASE,
+                    RegexOption.MULTILINE,
+                    RegexOption.IGNORE_CASE,
+                    RegexOption.MULTILINE
+                )
+            )
+        )
+    }
+
     companion object {
         // don't intercept this
         val staticPattern = Regex("""staticPattern""")

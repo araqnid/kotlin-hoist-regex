@@ -1,6 +1,7 @@
 package org.araqnid.kotlin.hoistregex.kotlin
 
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethod
+import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingLotsaOptions
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingMultipleOptions
 import org.araqnid.kotlin.hoistregex.kotlin.TestInputsAsASM.originalSomeMethodUsingSingleOption
 import org.jetbrains.org.objectweb.asm.MethodVisitor
@@ -61,6 +62,29 @@ class HoistingMethodAdapterTest {
     @Test
     fun `handles regex created with multiple options`() {
         val (allText, patternAllocator) = produceAndDisassemble(::originalSomeMethodUsingMultipleOptions)
+        assertFalse(
+            allText.contains(
+                """
+                |    NEW kotlin/text/Regex
+                """.trimMargin()
+            ), "Method produced:\n\n$allText"
+        )
+        assertTrue(
+            allText.contains(
+                """
+                |    GETSTATIC testInputs.Example.${'$'}pattern${'$'}0 : Lkotlin/text/Regex;
+                """.trimMargin()
+            ), "Method produced:\n\n$allText"
+        )
+        assertEquals(
+            patternAllocator.all,
+            listOf(PatternAllocator.Allocated("testInputs.Example", "\$pattern\$0", PatternAllocator.Pattern("variablePatternWithMultipleOptions", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))))
+        )
+    }
+
+    @Test
+    fun `handles regex created with lots of options`() {
+        val (allText, patternAllocator) = produceAndDisassemble(::originalSomeMethodUsingLotsaOptions)
         assertFalse(
             allText.contains(
                 """
