@@ -17,6 +17,7 @@ import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
 import java.io.File
+import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
@@ -166,6 +167,24 @@ class HoistRegexTest {
             "class should contain static field definition" +
                     "\n\n$javapOutput"
         )
+
+        compilerEnvironment.createClassLoader().use { classLoader ->
+            val exampleClass = classLoader.loadClass("testInput.Example")
+            val exampleInstance = exampleClass.getConstructor().newInstance()
+            fun someMethod(str: String): Boolean =
+                exampleClass.getMethod("someMethod", String::class.java).invoke(exampleInstance, str) as Boolean
+            fun someMethodUsingSingleOption(str: String): Boolean =
+                exampleClass.getMethod("someMethodUsingSingleOption", String::class.java).invoke(exampleInstance, str) as Boolean
+            fun someMethodUsingMultipleOptions(str: String): Boolean =
+                exampleClass.getMethod("someMethodUsingMultipleOptions", String::class.java).invoke(exampleInstance, str) as Boolean
+
+            assertFalse(someMethod("xyzzy"), "someMethod should not match xyzzy")
+            assertTrue(someMethod("variablePattern"), "someMethod should match variablePattern")
+            assertFalse(someMethodUsingSingleOption("xyzzy"), "someMethodUsingSingleOption should not match xyzzy")
+            assertTrue(someMethodUsingSingleOption("VARIABLEPATTERNWITHOPTION"), "someMethodUsingSingleOption should match VARIABLEPATTERNWITHOPTION")
+            assertFalse(someMethodUsingMultipleOptions("xyzzy"), "someMethodUsingMultipleOptions should not match xyzzy")
+            assertTrue(someMethodUsingMultipleOptions("VARIABLEPATTERNWITHMultipleOptions"), "someMethodUsingMultipleOptions should match VARIABLEPATTERNWITHMultipleOptions")
+        }
     }
 
     private fun summariseMethodInstructions(targetClass: String): Pair<Map<String, List<String>>, String> {
@@ -272,6 +291,10 @@ class HoistRegexTest {
             val text = process.inputStream.bufferedReader().readText()
             check(process.waitFor() == 0) { "javap failed\n${errorLines.joinToString("\n")}" }
             return text
+        }
+
+        fun createClassLoader(): URLClassLoader {
+            return URLClassLoader("mangledTestOutput", arrayOf(tempDirectory.toURI().toURL()), Thread.currentThread().contextClassLoader)
         }
 
         inner class DisposableImpl : Disposable {
