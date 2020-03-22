@@ -12,7 +12,12 @@ class Example {
     }
 
     fun someMethodUsingMultipleOptions(input: String): Boolean {
-        return input.matches(Regex("""variablePatternWithMultipleOptions""", setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)))
+        return input.matches(
+            Regex(
+                """variablePatternWithMultipleOptions""",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE)
+            )
+        )
     }
 
     companion object {

@@ -33,20 +33,33 @@ class HoistRegexTest {
         val (methodInstructions, javapOutput) = summariseMethodInstructions("testInput.Example")
         val someMethodInstructions = methodInstructions["someMethod"]?.joinToString("\n") ?: error("No instructions for someMethod\n\n$javapOutput")
         val someMethodUsingSingleOptionInstructions = methodInstructions["someMethodUsingSingleOption"]?.joinToString("\n") ?: error("No instructions for someMethodUsingSingleOption\n\n$javapOutput")
+        val someMethodUsingMultipleOptionsInstructions = methodInstructions["someMethodUsingMultipleOptions"]?.joinToString("\n") ?: error("No instructions for someMethodUsingMultipleOptions\n\n$javapOutput")
         val constructorInstructions = methodInstructions["testInput.Example"]?.joinToString("\n") ?: error("No instructions for constructor\n\n$javapOutput")
         val staticInitialiserInstructions = methodInstructions["<clinit>"]?.joinToString("\n") ?: error("No instructions for static initialiser\n\n$javapOutput")
         assertFalse(someMethodInstructions.contains("""
             |new class kotlin/text/Regex
-            |dup 
+            |dup
             |ldc String variablePattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
         """.trimMargin()),
             "someMethod should not contain Regex(...) creation sequence at variable initialisation" +
                     "\n\nMethod instructions:\n$someMethodInstructions\n\n$javapOutput"
         )
+        assertFalse(someMethodUsingSingleOptionInstructions.contains("""
+            |new class kotlin/text/Regex
+        """.trimMargin()),
+            "someMethodUsingSingleOption should not contain Regex(...) creation sequence at property initialisation" +
+                    "\n\nConstructor instructions:\n$someMethodUsingSingleOptionInstructions\n\n$javapOutput"
+        )
+        assertFalse(someMethodUsingMultipleOptionsInstructions.contains("""
+            |new class kotlin/text/Regex
+        """.trimMargin()),
+            "someMethodUsingMultipleOptions should not contain Regex(...) creation sequence at property initialisation" +
+                    "\n\nConstructor instructions:\n$someMethodUsingMultipleOptionsInstructions\n\n$javapOutput"
+        )
         assertFalse(constructorInstructions.contains("""
             |new class kotlin/text/Regex
-            |dup 
+            |dup
             |ldc String propertyPattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
         """.trimMargin()),
@@ -55,7 +68,7 @@ class HoistRegexTest {
         )
         assertTrue(staticInitialiserInstructions.contains("""
             |new class kotlin/text/Regex
-            |dup 
+            |dup
             |ldc String variablePattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
             |putstatic Field ${'$'}pattern${'$'}0:Lkotlin/text/Regex;
@@ -65,7 +78,7 @@ class HoistRegexTest {
         )
         assertTrue(staticInitialiserInstructions.contains("""
             |new class kotlin/text/Regex
-            |dup 
+            |dup
             |ldc String variablePatternWithOption
             |getstatic Field kotlin/text/RegexOption.IGNORE_CASE:Lkotlin/text/RegexOption;
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;Lkotlin/text/RegexOption;)V
@@ -76,10 +89,31 @@ class HoistRegexTest {
         )
         assertTrue(staticInitialiserInstructions.contains("""
             |new class kotlin/text/Regex
-            |dup 
+            |dup
+            |ldc String variablePatternWithMultipleOptions
+            |iconst_2
+            |anewarray class kotlin/text/RegexOption
+            |dup
+            |iconst_0
+            |getstatic Field kotlin/text/RegexOption.IGNORE_CASE:Lkotlin/text/RegexOption;
+            |aastore
+            |dup
+            |iconst_1
+            |getstatic Field kotlin/text/RegexOption.MULTILINE:Lkotlin/text/RegexOption;
+            |aastore
+            |invokestatic Method kotlin/collections/SetsKt.setOf:([Ljava/lang/Object;)Ljava/util/Set;
+            |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;Ljava/util/Set;)V
+            |putstatic Field ${'$'}pattern${'$'}2:Lkotlin/text/Regex;
+        """.trimMargin()),
+            "static initialiser should contain Regex(...) creation sequence for someMethodUsingMultipleOptions variable initialisation" +
+                    "\n\nInitialiser instructions:\n$staticInitialiserInstructions\n\n$javapOutput"
+        )
+        assertTrue(staticInitialiserInstructions.contains("""
+            |new class kotlin/text/Regex
+            |dup
             |ldc String propertyPattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
-            |putstatic Field ${'$'}pattern${'$'}2:Lkotlin/text/Regex;
+            |putstatic Field ${'$'}pattern${'$'}3:Lkotlin/text/Regex;
         """.trimMargin()),
             "static initialiser should contain Regex(...) creation sequence for property initialisation" +
                     "\n\nInitialiser instructions:\n$staticInitialiserInstructions\n\n$javapOutput"
@@ -96,8 +130,14 @@ class HoistRegexTest {
             "someMethodUsingSingleOption should contain cached regex access sequence at variable initialisation" +
                     "\n\nMethod instructions:\n$someMethodInstructions\n\n$javapOutput"
         )
-        assertTrue(constructorInstructions.contains("""
+        assertTrue(someMethodUsingMultipleOptionsInstructions.contains("""
             |getstatic Field ${'$'}pattern${'$'}2:Lkotlin/text/Regex;
+        """.trimMargin()),
+            "someMethodUsingSingleOption should contain cached regex access sequence at variable initialisation" +
+                    "\n\nMethod instructions:\n$someMethodInstructions\n\n$javapOutput"
+        )
+        assertTrue(constructorInstructions.contains("""
+            |getstatic Field ${'$'}pattern${'$'}3:Lkotlin/text/Regex;
         """.trimMargin()),
             "constructor should contain cached regex access sequence at property initialisation" +
                     "\n\nConstructor instructions:\n$constructorInstructions\n\n$javapOutput"
@@ -116,6 +156,12 @@ class HoistRegexTest {
         )
         assertTrue(javapOutput.contains("""
             |private static final kotlin.text.Regex ${'$'}pattern${'$'}2
+        """.trimMargin()),
+            "class should contain static field definition" +
+                    "\n\n$javapOutput"
+        )
+        assertTrue(javapOutput.contains("""
+            |private static final kotlin.text.Regex ${'$'}pattern${'$'}3
         """.trimMargin()),
             "class should contain static field definition" +
                     "\n\n$javapOutput"
@@ -143,7 +189,7 @@ class HoistRegexTest {
                 val instructionMatch = instructionPattern.matchEntire(innerLine) ?: continue
                 val instruction = instructionMatch.groupValues[1]
                 val comment = if (instructionMatch.groupValues.size > 2) instructionMatch.groupValues[2] else null
-                methodInstructions += if (comment != null) "$instruction $comment" else instruction
+                methodInstructions += if (comment != null && comment.isNotBlank()) "$instruction $comment" else instruction
             }
             summarisedInstructions[methodName] = methodInstructions
         }

@@ -2,7 +2,23 @@ package org.araqnid.kotlin.hoistregex.kotlin
 
 import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.MethodVisitor
-import org.jetbrains.org.objectweb.asm.Opcodes
+import org.jetbrains.org.objectweb.asm.Opcodes.AASTORE
+import org.jetbrains.org.objectweb.asm.Opcodes.ALOAD
+import org.jetbrains.org.objectweb.asm.Opcodes.ANEWARRAY
+import org.jetbrains.org.objectweb.asm.Opcodes.ASTORE
+import org.jetbrains.org.objectweb.asm.Opcodes.CHECKCAST
+import org.jetbrains.org.objectweb.asm.Opcodes.DUP
+import org.jetbrains.org.objectweb.asm.Opcodes.GETSTATIC
+import org.jetbrains.org.objectweb.asm.Opcodes.ICONST_0
+import org.jetbrains.org.objectweb.asm.Opcodes.ICONST_1
+import org.jetbrains.org.objectweb.asm.Opcodes.ICONST_2
+import org.jetbrains.org.objectweb.asm.Opcodes.INVOKESPECIAL
+import org.jetbrains.org.objectweb.asm.Opcodes.INVOKESTATIC
+import org.jetbrains.org.objectweb.asm.Opcodes.INVOKEVIRTUAL
+import org.jetbrains.org.objectweb.asm.Opcodes.IRETURN
+import org.jetbrains.org.objectweb.asm.Opcodes.ISTORE
+import org.jetbrains.org.objectweb.asm.Opcodes.NEW
+
 
 object TestInputsAsASM {
     fun originalSomeMethod(methodVisitor: MethodVisitor) {
@@ -12,10 +28,10 @@ object TestInputsAsASM {
         methodVisitor.visitCode()
         val label0 = Label()
         methodVisitor.visitLabel(label0)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1)
+        methodVisitor.visitVarInsn(ALOAD, 1)
         methodVisitor.visitLdcInsn("input")
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESTATIC,
+            INVOKESTATIC,
             "kotlin/jvm/internal/Intrinsics",
             "checkParameterIsNotNull",
             "(Ljava/lang/Object;Ljava/lang/String;)V",
@@ -24,32 +40,32 @@ object TestInputsAsASM {
         val label1 = Label()
         methodVisitor.visitLabel(label1)
         methodVisitor.visitLineNumber(7, label1)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1)
-        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/CharSequence")
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, 2)
-        methodVisitor.visitTypeInsn(Opcodes.NEW, "kotlin/text/Regex")
-        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitVarInsn(ALOAD, 1)
+        methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/CharSequence")
+        methodVisitor.visitVarInsn(ASTORE, 2)
+        methodVisitor.visitTypeInsn(NEW, "kotlin/text/Regex")
+        methodVisitor.visitInsn(DUP)
         methodVisitor.visitLdcInsn("variablePattern")
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESPECIAL,
+            INVOKESPECIAL,
             "kotlin/text/Regex",
             "<init>",
             "(Ljava/lang/String;)V",
             false
         )
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, 3)
-        methodVisitor.visitInsn(Opcodes.ICONST_0)
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, 4)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 3)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2)
+        methodVisitor.visitVarInsn(ASTORE, 3)
+        methodVisitor.visitInsn(ICONST_0)
+        methodVisitor.visitVarInsn(ISTORE, 4)
+        methodVisitor.visitVarInsn(ALOAD, 3)
+        methodVisitor.visitVarInsn(ALOAD, 2)
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL,
+            INVOKEVIRTUAL,
             "kotlin/text/Regex",
             "matches",
             "(Ljava/lang/CharSequence;)Z",
             false
         )
-        methodVisitor.visitInsn(Opcodes.IRETURN)
+        methodVisitor.visitInsn(IRETURN)
         val label2 = Label()
         methodVisitor.visitLabel(label2)
         methodVisitor.visitLocalVariable("this", "LtestInput/Example;", null, label0, label2, 0)
@@ -65,10 +81,10 @@ object TestInputsAsASM {
         methodVisitor.visitCode()
         val label0 = Label()
         methodVisitor.visitLabel(label0)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1)
+        methodVisitor.visitVarInsn(ALOAD, 1)
         methodVisitor.visitLdcInsn("input")
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESTATIC,
+            INVOKESTATIC,
             "kotlin/jvm/internal/Intrinsics",
             "checkParameterIsNotNull",
             "(Ljava/lang/Object;Ljava/lang/String;)V",
@@ -77,38 +93,38 @@ object TestInputsAsASM {
         val label1 = Label()
         methodVisitor.visitLabel(label1)
         methodVisitor.visitLineNumber(11, label1)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1)
-        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/CharSequence")
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, 2)
-        methodVisitor.visitTypeInsn(Opcodes.NEW, "kotlin/text/Regex")
-        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitVarInsn(ALOAD, 1)
+        methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/CharSequence")
+        methodVisitor.visitVarInsn(ASTORE, 2)
+        methodVisitor.visitTypeInsn(NEW, "kotlin/text/Regex")
+        methodVisitor.visitInsn(DUP)
         methodVisitor.visitLdcInsn("variablePatternWithOption")
         methodVisitor.visitFieldInsn(
-            Opcodes.GETSTATIC,
+            GETSTATIC,
             "kotlin/text/RegexOption",
             "IGNORE_CASE",
             "Lkotlin/text/RegexOption;"
         )
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESPECIAL,
+            INVOKESPECIAL,
             "kotlin/text/Regex",
             "<init>",
             "(Ljava/lang/String;Lkotlin/text/RegexOption;)V",
             false
         )
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, 3)
-        methodVisitor.visitInsn(Opcodes.ICONST_0)
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, 4)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 3)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2)
+        methodVisitor.visitVarInsn(ASTORE, 3)
+        methodVisitor.visitInsn(ICONST_0)
+        methodVisitor.visitVarInsn(ISTORE, 4)
+        methodVisitor.visitVarInsn(ALOAD, 3)
+        methodVisitor.visitVarInsn(ALOAD, 2)
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL,
+            INVOKEVIRTUAL,
             "kotlin/text/Regex",
             "matches",
             "(Ljava/lang/CharSequence;)Z",
             false
         )
-        methodVisitor.visitInsn(Opcodes.IRETURN)
+        methodVisitor.visitInsn(IRETURN)
         val label2 = Label()
         methodVisitor.visitLabel(label2)
         methodVisitor.visitLocalVariable("this", "LtestInput/Example;", null, label0, label2, 0)
@@ -124,10 +140,10 @@ object TestInputsAsASM {
         methodVisitor.visitCode()
         val label0 = Label()
         methodVisitor.visitLabel(label0)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1)
+        methodVisitor.visitVarInsn(ALOAD, 1)
         methodVisitor.visitLdcInsn("input")
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESTATIC,
+            INVOKESTATIC,
             "kotlin/jvm/internal/Intrinsics",
             "checkParameterIsNotNull",
             "(Ljava/lang/Object;Ljava/lang/String;)V",
@@ -136,63 +152,68 @@ object TestInputsAsASM {
         val label1 = Label()
         methodVisitor.visitLabel(label1)
         methodVisitor.visitLineNumber(15, label1)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 1)
-        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/CharSequence")
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, 2)
-        methodVisitor.visitTypeInsn(Opcodes.NEW, "kotlin/text/Regex")
-        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitVarInsn(ALOAD, 1)
+        methodVisitor.visitTypeInsn(CHECKCAST, "java/lang/CharSequence")
+        methodVisitor.visitVarInsn(ASTORE, 2)
+        val label2 = Label()
+        methodVisitor.visitLabel(label2)
+        methodVisitor.visitLineNumber(16, label2)
+        methodVisitor.visitTypeInsn(NEW, "kotlin/text/Regex")
+        methodVisitor.visitInsn(DUP)
+        val label3 = Label()
+        methodVisitor.visitLabel(label3)
+        methodVisitor.visitLineNumber(17, label3)
         methodVisitor.visitLdcInsn("variablePatternWithMultipleOptions")
-        methodVisitor.visitInsn(Opcodes.ICONST_2)
-        methodVisitor.visitTypeInsn(Opcodes.ANEWARRAY, "kotlin/text/RegexOption")
-        methodVisitor.visitInsn(Opcodes.DUP)
-        methodVisitor.visitInsn(Opcodes.ICONST_0)
-        methodVisitor.visitFieldInsn(
-            Opcodes.GETSTATIC,
-            "kotlin/text/RegexOption",
-            "IGNORE_CASE",
-            "Lkotlin/text/RegexOption;"
-        )
-        methodVisitor.visitInsn(Opcodes.AASTORE)
-        methodVisitor.visitInsn(Opcodes.DUP)
-        methodVisitor.visitInsn(Opcodes.ICONST_1)
-        methodVisitor.visitFieldInsn(
-            Opcodes.GETSTATIC,
-            "kotlin/text/RegexOption",
-            "MULTILINE",
-            "Lkotlin/text/RegexOption;"
-        )
-        methodVisitor.visitInsn(Opcodes.AASTORE)
+        val label4 = Label()
+        methodVisitor.visitLabel(label4)
+        methodVisitor.visitLineNumber(18, label4)
+        methodVisitor.visitInsn(ICONST_2)
+        methodVisitor.visitTypeInsn(ANEWARRAY, "kotlin/text/RegexOption")
+        methodVisitor.visitInsn(DUP)
+        methodVisitor.visitInsn(ICONST_0)
+        methodVisitor.visitFieldInsn(GETSTATIC, "kotlin/text/RegexOption", "IGNORE_CASE", "Lkotlin/text/RegexOption;")
+        methodVisitor.visitInsn(AASTORE)
+        methodVisitor.visitInsn(DUP)
+        methodVisitor.visitInsn(ICONST_1)
+        methodVisitor.visitFieldInsn(GETSTATIC, "kotlin/text/RegexOption", "MULTILINE", "Lkotlin/text/RegexOption;")
+        methodVisitor.visitInsn(AASTORE)
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESTATIC,
+            INVOKESTATIC,
             "kotlin/collections/SetsKt",
             "setOf",
             "([Ljava/lang/Object;)Ljava/util/Set;",
             false
         )
+        val label5 = Label()
+        methodVisitor.visitLabel(label5)
+        methodVisitor.visitLineNumber(16, label5)
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKESPECIAL,
+            INVOKESPECIAL,
             "kotlin/text/Regex",
             "<init>",
             "(Ljava/lang/String;Ljava/util/Set;)V",
             false
         )
-        methodVisitor.visitVarInsn(Opcodes.ASTORE, 3)
-        methodVisitor.visitInsn(Opcodes.ICONST_0)
-        methodVisitor.visitVarInsn(Opcodes.ISTORE, 4)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 3)
-        methodVisitor.visitVarInsn(Opcodes.ALOAD, 2)
+        methodVisitor.visitVarInsn(ASTORE, 3)
+        val label6 = Label()
+        methodVisitor.visitLabel(label6)
+        methodVisitor.visitLineNumber(15, label6)
+        methodVisitor.visitInsn(ICONST_0)
+        methodVisitor.visitVarInsn(ISTORE, 4)
+        methodVisitor.visitVarInsn(ALOAD, 3)
+        methodVisitor.visitVarInsn(ALOAD, 2)
         methodVisitor.visitMethodInsn(
-            Opcodes.INVOKEVIRTUAL,
+            INVOKEVIRTUAL,
             "kotlin/text/Regex",
             "matches",
             "(Ljava/lang/CharSequence;)Z",
             false
         )
-        methodVisitor.visitInsn(Opcodes.IRETURN)
-        val label2 = Label()
-        methodVisitor.visitLabel(label2)
-        methodVisitor.visitLocalVariable("this", "LtestInput/Example;", null, label0, label2, 0)
-        methodVisitor.visitLocalVariable("input", "Ljava/lang/String;", null, label0, label2, 1)
+        methodVisitor.visitInsn(IRETURN)
+        val label7 = Label()
+        methodVisitor.visitLabel(label7)
+        methodVisitor.visitLocalVariable("this", "LtestInput/Example;", null, label0, label7, 0)
+        methodVisitor.visitLocalVariable("input", "Ljava/lang/String;", null, label0, label7, 1)
         methodVisitor.visitMaxs(7, 5)
         methodVisitor.visitEnd()
     }

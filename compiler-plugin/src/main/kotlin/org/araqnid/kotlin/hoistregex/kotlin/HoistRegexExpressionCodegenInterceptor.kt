@@ -16,6 +16,7 @@ class HoistRegexExpressionCodegenInterceptor(private val patternAllocator: Patte
 
         val clinitCodegen = codegen.createOrGetClInitCodegen()
         val regexType = Type.getObjectType("kotlin/text/Regex")
+        val regexOptionType = Type.getObjectType("kotlin/text/RegexOption")
 
         for ((className, symbol, pattern) in patterns) {
             codegen.v.newField(
@@ -33,7 +34,18 @@ class HoistRegexExpressionCodegenInterceptor(private val patternAllocator: Patte
                     clinitCodegen.v.getstatic("kotlin/text/RegexOption", pattern.options.first().name, "Lkotlin/text/RegexOption;")
                     clinitCodegen.v.invokespecial("kotlin/text/Regex", "<init>", "(Ljava/lang/String;Lkotlin/text/RegexOption;)V", false)
                 }
-                else -> TODO()
+                else -> {
+                    clinitCodegen.v.iconst(pattern.options.size)
+                    clinitCodegen.v.newarray(regexOptionType)
+                    for ((index, option) in pattern.options.withIndex()) {
+                        clinitCodegen.v.dup()
+                        clinitCodegen.v.iconst(index)
+                        clinitCodegen.v.getstatic("kotlin/text/RegexOption", option.name, "Lkotlin/text/RegexOption;")
+                        clinitCodegen.v.astore(regexOptionType)
+                    }
+                    clinitCodegen.v.invokestatic("kotlin/collections/SetsKt", "setOf","([Ljava/lang/Object;)Ljava/util/Set;", false)
+                    clinitCodegen.v.invokespecial("kotlin/text/Regex", "<init>", "(Ljava/lang/String;Ljava/util/Set;)V", false)
+                }
             }
             clinitCodegen.v.putstatic(className, symbol, regexType.descriptor)
         }

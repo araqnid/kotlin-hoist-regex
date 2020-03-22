@@ -7,11 +7,9 @@ import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.util.Textifier
 import org.jetbrains.org.objectweb.asm.util.TraceMethodVisitor
 import org.junit.Test
-import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-
 
 class HoistingMethodAdapterTest {
     @Test
@@ -60,7 +58,6 @@ class HoistingMethodAdapterTest {
         )
     }
 
-    @Ignore
     @Test
     fun `handles regex created with multiple options`() {
         val (allText, patternAllocator) = produceAndDisassemble(::originalSomeMethodUsingMultipleOptions)

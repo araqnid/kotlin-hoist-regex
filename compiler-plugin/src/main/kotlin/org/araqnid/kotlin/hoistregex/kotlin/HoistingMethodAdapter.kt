@@ -8,6 +8,7 @@ import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.TypePath
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
+import java.util.EnumSet
 
 // Want to convert a sequence like this:
 //       11: new           #19                 // class kotlin/text/Regex
@@ -28,21 +29,94 @@ class HoistingMethodAdapter(
 
     companion object {
         private const val dup = "visitInsn:${Opcodes.DUP}"
+        private const val aastore = "visitInsn:${Opcodes.AASTORE}"
         private const val ldcPrefix = "visitLdcInsn:"
         private const val constructor = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;)V:false"
         private const val constructorSingleOption = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;Lkotlin/text/RegexOption;)V:false"
+        private const val constructorMultipleOptions = "visitMethodInsn:${Opcodes.INVOKESPECIAL}:kotlin/text/Regex:<init>:(Ljava/lang/String;Ljava/util/Set;)V:false"
         private val getOptionPattern = Regex("visitFieldInsn:${Opcodes.GETSTATIC}:kotlin/text/RegexOption:([A-Z_]+):Lkotlin/text/RegexOption;")
+        private const val createRegexOptionArray = "visitTypeInsn:${Opcodes.ANEWARRAY}:kotlin/text/RegexOption"
+        private const val invokeSetOf = "visitMethodInsn:${Opcodes.INVOKESTATIC}:kotlin/collections/SetsKt:setOf:([Ljava/lang/Object;)Ljava/util/Set;:false"
+
+        suspend fun MatcherScope<String>.takeInsn(): String {
+            while (true) {
+                val insn = take()
+                if (!insn.startsWith("visitLabel:") && !insn.startsWith("visitLineNumber:")) {
+                    return insn
+                }
+            }
+        }
+
         suspend fun MatcherScope<String>.matchRegexInstructions(): PatternAllocator.Pattern? {
-            if (take() != dup) return null
-            val patternInsn = take()
+            if (takeInsn() != dup) return null
+            val patternInsn = takeInsn()
             if (!patternInsn.startsWith(ldcPrefix)) return null
             val pattern = patternInsn.substring(ldcPrefix.length)
-            val optionsOrConstructor = take()
+            val optionsOrConstructor = takeInsn()
             if (optionsOrConstructor == constructor) return PatternAllocator.Pattern(pattern, emptySet())
-            val getOptionMatch = getOptionPattern.matchEntire(optionsOrConstructor) ?: return null
+            val option = decodeGetOption(optionsOrConstructor)
+            if (option != null) {
+                // single option
+                if (takeInsn() != constructorSingleOption) return null
+                return PatternAllocator.Pattern(pattern, setOf(option))
+            }
+            val options = matchMultipleOptions(optionsOrConstructor)
+            if (options != null) {
+                if (takeInsn() != constructorMultipleOptions) return null
+                return PatternAllocator.Pattern(pattern, options)
+            }
+            return null
+        }
+
+        private fun decodeGetOption(insn: String): RegexOption? {
+            val getOptionMatch = getOptionPattern.matchEntire(insn) ?: return null
             val option = getOptionMatch.groupValues[1]
-            if (take() != constructorSingleOption) return null
-            return PatternAllocator.Pattern(pattern, setOf(RegexOption.valueOf(option)))
+            return RegexOption.valueOf(option)
+        }
+
+        // multiple options? can't handle in general, but one common construction is:
+        //   Regex("....", setOf(RegexOption.A, RegexOption.B))
+        //  which is emitted as
+        //   ICONST_2 etc (number of choices)
+        //   ANEWARRAY kotlin/text/RegexOption
+        //   DUP
+        //   ICONST_0
+        //   GETSTATIC kotlin/text/RegexOption.IGNORE_CASE : Lkotlin/text/RegexOption;
+        //   AASTORE
+        //   DUP
+        //   ICONST_1
+        //   GETSTATIC kotlin/text/RegexOption.MULTILINE : Lkotlin/text/RegexOption;
+        //   AASTORE
+        //   INVOKESTATIC kotlin/collections/SetsKt.setOf ([Ljava/lang/Object;)Ljava/util/Set;
+        //   INVOKESPECIAL kotlin/text/Regex.<init> (Ljava/lang/String;Ljava/util/Set;)V
+        private suspend fun MatcherScope<String>.matchMultipleOptions(possibleSizeInsn: String): Set<RegexOption>? {
+            decodeIntConstant(possibleSizeInsn) ?: return null
+            if (takeInsn() != createRegexOptionArray) return null
+            val options = EnumSet.noneOf(RegexOption::class.java)
+            if (takeInsn() != dup) return null
+            while (true) {
+                decodeIntConstant(takeInsn()) ?: return null
+                val option = decodeGetOption(takeInsn()) ?: return null
+                if (takeInsn() != aastore) return null
+                options += option
+                when (takeInsn()) {
+                    dup -> Unit
+                    invokeSetOf -> return options
+                    else -> return null
+                }
+            }
+        }
+
+        private fun decodeIntConstant(insn: String): Int? {
+            return when (insn) {
+                "visitInsn:${Opcodes.ICONST_0}" -> 0 // Whyyyy
+                "visitInsn:${Opcodes.ICONST_1}" -> 1
+                "visitInsn:${Opcodes.ICONST_2}" -> 2
+                "visitInsn:${Opcodes.ICONST_3}" -> 3
+                "visitInsn:${Opcodes.ICONST_4}" -> 4
+                "visitInsn:${Opcodes.ICONST_5}" -> 5
+                else -> null
+            }
         }
     }
 
@@ -168,8 +242,9 @@ class HoistingMethodAdapter(
         super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
     }
 
-    override fun visitLabel(label: Label?) {
-        failedExpectation()
+    override fun visitLabel(label: Label) {
+        if (shiftExpectations("visitLabel:$label") { visitLabel(label) })
+            return
         super.visitLabel(label)
     }
 
@@ -203,8 +278,9 @@ class HoistingMethodAdapter(
         super.visitIincInsn(`var`, increment)
     }
 
-    override fun visitLineNumber(line: Int, start: Label?) {
-        failedExpectation()
+    override fun visitLineNumber(line: Int, start: Label) {
+        if (shiftExpectations("visitLineNumber:$line:$start") { visitLineNumber(line, start) })
+            return
         super.visitLineNumber(line, start)
     }
 
