@@ -67,7 +67,7 @@ fun <I : Any, O : Any> matchSequence(body: suspend MatcherScope<I>.() -> O?): Se
     return matcher
 }
 
-fun <I : Any, O : Any> SequenceMatcher<I, O>.match(inputs: Iterator<I>): SequenceMatchResult<O> {
+private fun <I : Any, O : Any> SequenceMatcher<I, O>.matchIterator(inputs: Iterator<I>): SequenceMatchResult<O> {
     while (inputs.hasNext()) {
         val result = invoke(inputs.next())
         if (result != null) return result
@@ -76,7 +76,7 @@ fun <I : Any, O : Any> SequenceMatcher<I, O>.match(inputs: Iterator<I>): Sequenc
 }
 
 fun <I : Any, O : Any> SequenceMatcher<I, O>.match(inputs: Sequence<I>) =
-    match(inputs.iterator())
+    matchIterator(inputs.iterator())
 
 fun <I : Any, O : Any> SequenceMatcher<I, O>.match(inputs: Iterable<I>) =
-    match(inputs.iterator())
+    matchIterator(inputs.iterator())
