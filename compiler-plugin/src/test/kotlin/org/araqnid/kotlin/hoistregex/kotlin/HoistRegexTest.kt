@@ -13,14 +13,8 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TestRule
-import org.junit.runner.Description
-import org.junit.runners.model.Statement
 import java.io.File
 import java.net.URLClassLoader
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.stream.Collectors
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -215,46 +209,7 @@ class HoistRegexTest {
         return summarisedInstructions to javapOutput
     }
 
-    class CompilerEnvironmentRule : TestRule {
-        private lateinit var description: Description
-        lateinit var tempDirectory: File
-        private val testMethodName by lazy { description.methodName!! }
-        private val testClassName by lazy { description.className!! }
-        private val testName by lazy { "$testClassName.$testMethodName" }
-
-        override fun apply(base: Statement, description: Description): Statement {
-            return object : Statement() {
-                override fun evaluate() {
-                    this@CompilerEnvironmentRule.description = description
-                    createTempDirectory()
-                    try {
-                        base.evaluate()
-                    } finally {
-                        deleteTempDirectory()
-                    }
-                }
-            }
-        }
-
-        private fun createTempDirectory() {
-            tempDirectory = Files.createTempDirectory("kotlin-hoist-regex-test").toFile()
-        }
-
-        private fun deleteTempDirectory() {
-            deleteRecursively(tempDirectory.toPath())
-        }
-
-        private fun deleteRecursively(path: Path) {
-            for (member in Files.list(path).use { it.collect(Collectors.toList()) }) {
-                when {
-                    Files.isSymbolicLink(member) || Files.isRegularFile(member) -> Files.delete(member)
-                    Files.isDirectory(member) -> deleteRecursively(member)
-                    else -> error("Unknown type of file: $member")
-                }
-            }
-            Files.delete(path)
-        }
-
+    class CompilerEnvironmentRule : TemporaryDirectoryRule() {
         val configuration by lazy {
             CompilerConfiguration().apply {
                 put(CommonConfigurationKeys.MODULE_NAME, "test-module")

@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.codegen.extensions.ExpressionCodegenExtension
 import org.jetbrains.kotlin.com.intellij.mock.MockProject
 import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.js.translate.extensions.JsSyntheticTranslateExtension
 
 @AutoService(ComponentRegistrar::class)
 class HoistRegexComponentRegistrar : ComponentRegistrar {
@@ -24,6 +25,11 @@ class HoistRegexComponentRegistrar : ComponentRegistrar {
         ExpressionCodegenExtension.registerExtension(
             project,
             HoistRegexExpressionCodegenInterceptor(patternAllocator)
+        )
+
+        JsSyntheticTranslateExtension.registerExtension(
+            project,
+            HoistRegexJsSyntheticTranslate(patternAllocator)
         )
     }
 }

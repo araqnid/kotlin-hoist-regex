@@ -21,9 +21,11 @@ val asmifier by configurations.creating
 
 val testInput by sourceSets.creating
 val testInputImplementation = configurations[testInput.implementationConfigurationName]
+val testInputJsImplementation by configurations.creating
 
 dependencies {
     testInputImplementation(kotlin("stdlib"))
+    testInputJsImplementation(kotlin("stdlib-js"))
     compileOnly(kotlin("compiler-embeddable"))
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
@@ -39,6 +41,7 @@ tasks {
         inputs.property("testInputCompileClasspath", testInput.compileClasspath)
         doFirst {
             environment("TEST_INPUT_COMPILE_CLASSPATH", testInput.compileClasspath.joinToString(":"))
+            environment("TEST_INPUT_JS_COMPILE_CLASSPATH", testInputJsImplementation.joinToString(":"))
         }
     }
 
