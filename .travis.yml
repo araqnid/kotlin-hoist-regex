@@ -1,2 +1,5 @@
 language: java
-jdk: openjdk12
+jdk:
+  - openjdk8
+  - openjdk11
+
