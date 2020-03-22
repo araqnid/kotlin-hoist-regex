@@ -17,12 +17,8 @@ java {
 
 val asmifier by configurations.creating
 
-sourceSets {
-    create("testInput")
-}
-
-val testInputCompileClasspath by configurations.getting
-val testInputImplementation by configurations.getting
+val testInput by sourceSets.creating
+val testInputImplementation = configurations[testInput.implementationConfigurationName]
 
 dependencies {
     testInputImplementation(kotlin("stdlib"))
@@ -38,9 +34,9 @@ dependencies {
 tasks {
     val test by getting(Test::class) {
         inputs.dir("src/testInput/kotlin")
-        inputs.property("testInputCompileClasspath", testInputCompileClasspath)
+        inputs.property("testInputCompileClasspath", testInput.compileClasspath)
         doFirst {
-            environment("TEST_INPUT_COMPILE_CLASSPATH", testInputCompileClasspath.joinToString(":"))
+            environment("TEST_INPUT_COMPILE_CLASSPATH", testInput.compileClasspath.joinToString(":"))
         }
     }
 
