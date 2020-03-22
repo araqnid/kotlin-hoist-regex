@@ -22,9 +22,7 @@ import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 class HoistingMethodAdapter(private val className: String, private val patternAllocator: PatternAllocator, private val original: MethodVisitor) : MethodVisitor(
     Opcodes.ASM5, original
 ) {
-    private var expectationNode: Node.Expectation? = null
-    private var onExpectationMismatch: MutableList<(MethodVisitor.() -> Unit)>? = null
-    private var onExpectationsMet: ((String) -> Unit)? = null
+    private var currentExpectations: Expectations? = null
 
     override fun visitTypeInsn(opcode: Int, type: String) {
         if (shiftExpectations("visitTypeInsn:$opcode:$type") { visitTypeInsn(opcode, type) })
@@ -32,16 +30,16 @@ class HoistingMethodAdapter(private val className: String, private val patternAl
         when (opcode) {
             Opcodes.NEW -> {
                 if (type == "kotlin/text/Regex") {
-                    expectationNode = Node.Expectation.ExpectDup
-                    onExpectationMismatch = mutableListOf()
-                    onExpectationMismatch!!.add { visitTypeInsn(opcode, type) }
-                    onExpectationsMet = { pattern ->
-
-                        InstructionAdapter(this).apply {
-                            val allocated = patternAllocator.allocate(className, pattern)
-                            getstatic(className, allocated.symbol, "Lkotlin/text/Regex;")
-                        }
-                    }
+                    val reapply: MethodVisitor.() -> Unit = { visitTypeInsn(opcode, type) }
+                    currentExpectations = Expectations(
+                        node = Node.Expectation.ExpectDup,
+                        onMismatch = listOf(reapply),
+                        onMet = { pattern ->
+                            InstructionAdapter(this).apply {
+                                val allocated = patternAllocator.allocate(className, pattern)
+                                getstatic(className, allocated.symbol, "Lkotlin/text/Regex;")
+                            }
+                        })
                     return
                 }
             }
@@ -244,40 +242,39 @@ class HoistingMethodAdapter(private val className: String, private val patternAl
     }
 
     private fun shiftExpectations(reality: String, op: MethodVisitor.() -> Unit): Boolean {
-        val node = expectationNode ?: return false
-        return when (val next = node.match(reality)) {
+        val expectations = currentExpectations ?: return false
+        return when (val next = expectations.node.match(reality)) {
             null -> {
                 // not matched
                 failedExpectation()
                 false // not matched - don't eat instruction
             }
             is Node.Terminal -> {
-                val finisher = onExpectationsMet!!
-                expectationNode = null
-                onExpectationMismatch = null
-                onExpectationsMet = null
-                finisher(next.value)
+                currentExpectations = null
+                expectations.onMet(next.value)
                 true // matched - eat instruction
             }
             is Node.Expectation -> {
-                expectationNode = next
-                onExpectationMismatch!!.add(op)
+                currentExpectations = expectations.copy(
+                    node = next,
+                    onMismatch = expectations.onMismatch + op
+                )
                 true // matched - eat instruction
             }
         }
     }
 
     private fun failedExpectation() {
-        if (expectationNode == null) return
-        for (flusher in onExpectationMismatch!!) {
+        val expectations = currentExpectations ?: return
+        for (flusher in expectations.onMismatch) {
             original.flusher()
         }
-        expectationNode = null
-        onExpectationMismatch = null
-        onExpectationsMet = null
+        currentExpectations = null
     }
 
-    sealed class Node {
+    private data class Expectations(val node: Node.Expectation, val onMismatch: List<MethodVisitor.() -> Unit>, val onMet: (String) -> Unit)
+
+    private sealed class Node {
         sealed class Expectation : Node() {
             abstract fun match(input: String): Node?
 
