@@ -34,10 +34,17 @@ class HoistRegexTest {
         assertFalse(someMethodInstructions.contains("""
             |new class kotlin/text/Regex
             |dup 
-            |ldc String \\S+
+            |ldc String variablePattern
             |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
         """.trimMargin()),
-            "someMethod should not contain Regex(...) creation sequence\n\n" + compilerEnvironment.runJavap("testInput.Example"))
+            "someMethod should not contain Regex(...) creation sequence at variable initialisation\n\n" + compilerEnvironment.runJavap("testInput.Example"))
+        assertFalse(someMethodInstructions.contains("""
+            |new class kotlin/text/Regex
+            |dup 
+            |ldc String propertyPattern
+            |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
+        """.trimMargin()),
+            "someMethod should not contain Regex(...) creation sequence at property initialisation\n\n" + compilerEnvironment.runJavap("testInput.Example"))
     }
 
     private fun summariseMethodInstructions(targetClass: String): Map<String, List<String>> {

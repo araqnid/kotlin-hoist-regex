@@ -16,21 +16,35 @@ import org.jetbrains.org.objectweb.asm.Opcodes.NEW
 import org.jetbrains.org.objectweb.asm.util.Textifier
 import org.jetbrains.org.objectweb.asm.util.TraceMethodVisitor
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+// Want to convert a sequence like this:
+//       11: new           #19                 // class kotlin/text/Regex
+//      14: dup
+//      15: ldc           #21                 // String \\S+
+//      17: invokespecial #25                 // Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
+// into:
+//    new   // class kotlin/text/Regex
+//    getstatic // Field $regex$whatever on theClass
+//    invokespecial
 
 class HoistingMethodAdapterTest {
     @Test
     fun `extracts regex creations and assigns symbols`() {
         val textifier = Textifier()
-        val hostingAdapter = HoistingMethodAdapter(TraceMethodVisitor(textifier))
+        val allocatedPatterns = mutableMapOf<String, String>()
+        val hostingAdapter = HoistingMethodAdapter("testInputs.Example", allocatedPatterns, TraceMethodVisitor(textifier))
         visitOriginalSomeMethod(hostingAdapter)
         val allText = textifier.getText().joinToString("")
         assertFalse(allText.contains("""
                 |    NEW kotlin/text/Regex
-                |    DUP
-                |    LDC "\\S+"
-                |    INVOKESPECIAL kotlin/text/Regex.<init> (Ljava/lang/String;)V
                 """.trimMargin()), "Method produced:\n\n$allText")
+        assertTrue(allText.contains("""
+                |    GETSTATIC testInputs.Example.${'$'}pattern${'$'}0 : Lkotlin/text/Regex;
+                """.trimMargin()), "Method produced:\n\n$allText")
+        assertEquals(allocatedPatterns, mapOf("\$pattern\$0" to "variablePattern"))
     }
 
     private fun visitOriginalSomeMethod(methodVisitor: MethodVisitor) {
@@ -57,7 +71,7 @@ class HoistingMethodAdapterTest {
         methodVisitor.visitVarInsn(ASTORE, 2)
         methodVisitor.visitTypeInsn(NEW, "kotlin/text/Regex")
         methodVisitor.visitInsn(DUP)
-        methodVisitor.visitLdcInsn("\\S+")
+        methodVisitor.visitLdcInsn("variablePattern")
         methodVisitor.visitMethodInsn(INVOKESPECIAL, "kotlin/text/Regex", "<init>", "(Ljava/lang/String;)V", false)
         methodVisitor.visitVarInsn(ASTORE, 3)
         methodVisitor.visitInsn(ICONST_0)
