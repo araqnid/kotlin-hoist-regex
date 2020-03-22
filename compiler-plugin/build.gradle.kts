@@ -21,8 +21,11 @@ sourceSets {
     create("testInput")
 }
 
+val testInputCompileClasspath by configurations.getting
+val testInputImplementation by configurations.getting
+
 dependencies {
-    "testInputImplementation"(kotlin("stdlib"))
+    testInputImplementation(kotlin("stdlib"))
     compileOnly(kotlin("compiler-embeddable"))
     compileOnly("com.google.auto.service:auto-service:1.0-rc4")
     kapt("com.google.auto.service:auto-service:1.0-rc4")
@@ -35,7 +38,6 @@ dependencies {
 tasks {
     val test by getting(Test::class) {
         inputs.dir("src/testInput/kotlin")
-        val testInputCompileClasspath by configurations.getting
         inputs.property("testInputCompileClasspath", testInputCompileClasspath)
         doFirst {
             environment("TEST_INPUT_COMPILE_CLASSPATH", testInputCompileClasspath.joinToString(":"))
