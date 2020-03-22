@@ -14,13 +14,19 @@ class HoistRegexExpressionCodegenInterceptor(private val patternAllocator: Patte
 
         val patterns = patternAllocator.allocatedForClass(codegen.className).takeIf { it.isNotEmpty() } ?: return
 
-        println("patterns for ${codegen.className}: $patterns")
+        val clinitCodegen = codegen.createOrGetClInitCodegen()
+        val regexType = Type.getObjectType("kotlin/text/Regex")
 
-        for ((_, symbol, pattern) in patterns) {
+        for ((className, symbol, pattern) in patterns) {
             codegen.v.newField(
                 JvmDeclarationOrigin.NO_ORIGIN, ACC_STATIC or ACC_PRIVATE or ACC_FINAL,
-                symbol, Type.getObjectType("kotlin/text/Regex").descriptor, null, null
+                symbol, regexType.descriptor, null, null
             )
+            clinitCodegen.v.anew(regexType)
+            clinitCodegen.v.dup()
+            clinitCodegen.v.aconst(pattern)
+            clinitCodegen.v.invokespecial("kotlin/text/Regex", "<init>", "(Ljava/lang/String;)V", false)
+            clinitCodegen.v.putstatic(className, symbol, regexType.descriptor)
         }
     }
 }

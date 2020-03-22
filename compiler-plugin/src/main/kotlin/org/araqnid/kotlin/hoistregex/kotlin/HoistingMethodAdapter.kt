@@ -4,6 +4,16 @@ import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
+// Want to convert a sequence like this:
+//       11: new           #19                 // class kotlin/text/Regex
+//      14: dup
+//      15: ldc           #21                 // String \\S+
+//      17: invokespecial #25                 // Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
+// into:
+//    new   // class kotlin/text/Regex
+//    getstatic // Field $regex$whatever on theClass
+//    invokespecial
+
 class HoistingMethodAdapter(private val className: String, private val patternAllocator: PatternAllocator, private val original: MethodVisitor) : MethodVisitor(
     Opcodes.ASM5, original
 ) {

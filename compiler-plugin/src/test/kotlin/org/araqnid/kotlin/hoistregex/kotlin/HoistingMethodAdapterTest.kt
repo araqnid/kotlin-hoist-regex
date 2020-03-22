@@ -20,16 +20,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-// Want to convert a sequence like this:
-//       11: new           #19                 // class kotlin/text/Regex
-//      14: dup
-//      15: ldc           #21                 // String \\S+
-//      17: invokespecial #25                 // Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
-// into:
-//    new   // class kotlin/text/Regex
-//    getstatic // Field $regex$whatever on theClass
-//    invokespecial
-
 class HoistingMethodAdapterTest {
     @Test
     fun `extracts regex creations and assigns symbols`() {

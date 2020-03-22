@@ -33,6 +33,7 @@ class HoistRegexTest {
         val (methodInstructions, javapOutput) = summariseMethodInstructions("testInput.Example")
         val someMethodInstructions = methodInstructions["someMethod"]?.joinToString("\n") ?: ""
         val constructorInstructions = methodInstructions["testInput.Example"]?.joinToString("\n") ?: ""
+        val staticInitialiserInstructions = methodInstructions["<clinit>"]?.joinToString("\n") ?: ""
         assertFalse(someMethodInstructions.contains("""
             |new class kotlin/text/Regex
             |dup 
@@ -50,6 +51,26 @@ class HoistRegexTest {
         """.trimMargin()),
             "constructor should not contain Regex(...) creation sequence at property initialisation" +
                     "\n\nConstructor instructions:\n$constructorInstructions\n\n$javapOutput"
+        )
+        assertTrue(staticInitialiserInstructions.contains("""
+            |new class kotlin/text/Regex
+            |dup 
+            |ldc String variablePattern
+            |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
+            |putstatic Field ${'$'}pattern${'$'}0:Lkotlin/text/Regex;
+        """.trimMargin()),
+            "static initialiser should contain Regex(...) creation sequence for variable initialisation" +
+                    "\n\nInitialiser instructions:\n$staticInitialiserInstructions\n\n$javapOutput"
+        )
+        assertTrue(staticInitialiserInstructions.contains("""
+            |new class kotlin/text/Regex
+            |dup 
+            |ldc String propertyPattern
+            |invokespecial Method kotlin/text/Regex."<init>":(Ljava/lang/String;)V
+            |putstatic Field ${'$'}pattern${'$'}1:Lkotlin/text/Regex;
+        """.trimMargin()),
+            "static initialiser should contain Regex(...) creation sequence for property initialisation" +
+                    "\n\nInitialiser instructions:\n$staticInitialiserInstructions\n\n$javapOutput"
         )
         assertTrue(someMethodInstructions.contains("""
             |getstatic Field ${'$'}pattern${'$'}0:Lkotlin/text/Regex;
@@ -83,10 +104,14 @@ class HoistRegexTest {
         val lineIterator = javapOutput.lines().iterator()
         val methodPattern = Regex(""" {2}(?:[a-z]+ )*([a-zA-Z_$][a-zA-Z_0-9$.]*)\((.*)\);""")
         val instructionPattern = Regex(""" *\d+: ([a-zA-Z_$][a-zA-Z_0-9$]*)\s*[#0-9, ]*\s*(?:// (.+))?""")
-        while (lineIterator.hasNext()) {
+        loop@ while (lineIterator.hasNext()) {
             val outerLine = lineIterator.next()
-            val methodMatch = methodPattern.matchEntire(outerLine) ?: continue
-            val (methodName, signature) = methodMatch.destructured
+            val methodMatch = methodPattern.matchEntire(outerLine)
+            val methodName = when {
+                methodMatch != null -> methodMatch.groupValues[1]
+                outerLine == "  static {};" -> "<clinit>"
+                else -> continue@loop
+            }
             val methodInstructions = mutableListOf<String>()
             while (lineIterator.hasNext()) {
                 val innerLine = lineIterator.next()
