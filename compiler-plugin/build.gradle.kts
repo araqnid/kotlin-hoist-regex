@@ -15,9 +15,7 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-configurations {
-    create("asmifier")
-}
+val asmifier by configurations.creating
 
 sourceSets {
     create("testInput")
@@ -31,7 +29,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     testImplementation(kotlin("test-junit"))
     testImplementation(kotlin("compiler-embeddable"))
-    "asmifier"("org.ow2.asm:asm-util:7.3.1")
+    asmifier("org.ow2.asm:asm-util:7.3.1")
 }
 
 tasks {
@@ -45,7 +43,8 @@ tasks {
     }
 
     val asmifyTestInputs by creating(JavaExec::class) {
-        val asmifier by configurations.getting
+        group = "development"
+        description = "Prints the ASM visitor calls to produce the test example class"
         dependsOn("compileTestInputKotlin")
         inputs.file("build/classes/kotlin/testInput/testInput/Example.class")
         classpath = files(asmifier)
