@@ -19,9 +19,11 @@ import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 //    getstatic // Field $regex$whatever on theClass
 //    invokespecial
 
-class HoistingMethodAdapter(private val className: String, private val patternAllocator: PatternAllocator, private val original: MethodVisitor) : MethodVisitor(
-    Opcodes.ASM5, original
-) {
+class HoistingMethodAdapter(
+    private val className: String,
+    private val patternAllocator: PatternAllocator,
+    private val original: MethodVisitor
+) : MethodVisitor(Opcodes.ASM5, original) {
     private var currentExpectations: Expectations? = null
 
     override fun visitTypeInsn(opcode: Int, type: String) {
