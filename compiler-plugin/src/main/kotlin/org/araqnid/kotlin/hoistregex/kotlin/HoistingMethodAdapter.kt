@@ -1,7 +1,12 @@
 package org.araqnid.kotlin.hoistregex.kotlin
 
+import org.jetbrains.org.objectweb.asm.AnnotationVisitor
+import org.jetbrains.org.objectweb.asm.Attribute
+import org.jetbrains.org.objectweb.asm.Handle
+import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
+import org.jetbrains.org.objectweb.asm.TypePath
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
 // Want to convert a sequence like this:
@@ -68,17 +73,182 @@ class HoistingMethodAdapter(private val className: String, private val patternAl
         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface)
     }
 
+    override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) {
+        failedExpectation()
+        super.visitMultiANewArrayInsn(descriptor, numDimensions)
+    }
+
+    override fun visitFrame(type: Int, numLocal: Int, local: Array<out Any>?, numStack: Int, stack: Array<out Any>?) {
+        failedExpectation()
+        super.visitFrame(type, numLocal, local, numStack, stack)
+    }
+
+    override fun visitVarInsn(opcode: Int, `var`: Int) {
+        failedExpectation()
+        super.visitVarInsn(opcode, `var`)
+    }
+
+    override fun visitTryCatchBlock(start: Label?, end: Label?, handler: Label?, type: String?) {
+        failedExpectation()
+        super.visitTryCatchBlock(start, end, handler, type)
+    }
+
+    override fun visitLookupSwitchInsn(dflt: Label?, keys: IntArray?, labels: Array<out Label>?) {
+        failedExpectation()
+        super.visitLookupSwitchInsn(dflt, keys, labels)
+    }
+
+    override fun visitJumpInsn(opcode: Int, label: Label?) {
+        failedExpectation()
+        super.visitJumpInsn(opcode, label)
+    }
+
+    override fun visitAnnotableParameterCount(parameterCount: Int, visible: Boolean) {
+        failedExpectation()
+        super.visitAnnotableParameterCount(parameterCount, visible)
+    }
+
+    override fun visitIntInsn(opcode: Int, operand: Int) {
+        failedExpectation()
+        super.visitIntInsn(opcode, operand)
+    }
+
+    override fun visitAnnotationDefault(): AnnotationVisitor {
+        failedExpectation()
+        return super.visitAnnotationDefault()
+    }
+
+    override fun visitAnnotation(descriptor: String?, visible: Boolean): AnnotationVisitor {
+        failedExpectation()
+        return super.visitAnnotation(descriptor, visible)
+    }
+
+    override fun visitTypeAnnotation(
+        typeRef: Int,
+        typePath: TypePath?,
+        descriptor: String?,
+        visible: Boolean
+    ): AnnotationVisitor {
+        failedExpectation()
+        return super.visitTypeAnnotation(typeRef, typePath, descriptor, visible)
+    }
+
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) {
+        failedExpectation()
+        super.visitMaxs(maxStack, maxLocals)
+    }
+
+    override fun visitInvokeDynamicInsn(
+        name: String?,
+        descriptor: String?,
+        bootstrapMethodHandle: Handle?,
+        vararg bootstrapMethodArguments: Any?
+    ) {
+        failedExpectation()
+        super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+    }
+
+    override fun visitLabel(label: Label?) {
+        failedExpectation()
+        super.visitLabel(label)
+    }
+
+    override fun visitTryCatchAnnotation(
+        typeRef: Int,
+        typePath: TypePath?,
+        descriptor: String?,
+        visible: Boolean
+    ): AnnotationVisitor {
+        failedExpectation()
+        return super.visitTryCatchAnnotation(typeRef, typePath, descriptor, visible)
+    }
+
+    override fun visitInsnAnnotation(
+        typeRef: Int,
+        typePath: TypePath?,
+        descriptor: String?,
+        visible: Boolean
+    ): AnnotationVisitor {
+        failedExpectation()
+        return super.visitInsnAnnotation(typeRef, typePath, descriptor, visible)
+    }
+
+    override fun visitParameterAnnotation(parameter: Int, descriptor: String?, visible: Boolean): AnnotationVisitor {
+        failedExpectation()
+        return super.visitParameterAnnotation(parameter, descriptor, visible)
+    }
+
+    override fun visitIincInsn(`var`: Int, increment: Int) {
+        failedExpectation()
+        super.visitIincInsn(`var`, increment)
+    }
+
+    override fun visitLineNumber(line: Int, start: Label?) {
+        failedExpectation()
+        super.visitLineNumber(line, start)
+    }
+
+    override fun visitLocalVariableAnnotation(
+        typeRef: Int,
+        typePath: TypePath?,
+        start: Array<out Label>?,
+        end: Array<out Label>?,
+        index: IntArray?,
+        descriptor: String?,
+        visible: Boolean
+    ): AnnotationVisitor {
+        failedExpectation()
+        return super.visitLocalVariableAnnotation(typeRef, typePath, start, end, index, descriptor, visible)
+    }
+
+    override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label?, vararg labels: Label?) {
+        failedExpectation()
+        super.visitTableSwitchInsn(min, max, dflt, *labels)
+    }
+
+    override fun visitEnd() {
+        failedExpectation()
+        super.visitEnd()
+    }
+
+    override fun visitLocalVariable(
+        name: String?,
+        descriptor: String?,
+        signature: String?,
+        start: Label?,
+        end: Label?,
+        index: Int
+    ) {
+        failedExpectation()
+        super.visitLocalVariable(name, descriptor, signature, start, end, index)
+    }
+
+    override fun visitParameter(name: String?, access: Int) {
+        failedExpectation()
+        super.visitParameter(name, access)
+    }
+
+    override fun visitAttribute(attribute: Attribute?) {
+        failedExpectation()
+        super.visitAttribute(attribute)
+    }
+
+    override fun visitFieldInsn(opcode: Int, owner: String?, name: String?, descriptor: String?) {
+        failedExpectation()
+        super.visitFieldInsn(opcode, owner, name, descriptor)
+    }
+
+    override fun visitCode() {
+        failedExpectation()
+        super.visitCode()
+    }
+
     private fun shiftExpectations(reality: String, op: MethodVisitor.() -> Unit): Boolean {
         val node = expectationNode ?: return false
         return when (val next = node.match(reality)) {
             null -> {
                 // not matched
-                for (flusher in onExpectationMismatch!!) {
-                    original.flusher()
-                }
-                expectationNode = null
-                onExpectationMismatch = null
-                onExpectationsMet = null
+                failedExpectation()
                 false // not matched - don't eat instruction
             }
             is Node.Terminal -> {
@@ -95,6 +265,16 @@ class HoistingMethodAdapter(private val className: String, private val patternAl
                 true // matched - eat instruction
             }
         }
+    }
+
+    private fun failedExpectation() {
+        if (expectationNode == null) return
+        for (flusher in onExpectationMismatch!!) {
+            original.flusher()
+        }
+        expectationNode = null
+        onExpectationMismatch = null
+        onExpectationsMet = null
     }
 
     sealed class Node {
