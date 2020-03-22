@@ -5,6 +5,8 @@ plugins {
 
 the<BasePluginConvention>().archivesBaseName = "kotlin-host-regex-kotlin-plugin"
 
+kapt.includeCompileClasspath = false
+
 repositories {
     mavenCentral()
     jcenter()

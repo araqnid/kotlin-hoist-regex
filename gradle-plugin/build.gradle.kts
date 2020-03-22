@@ -6,6 +6,8 @@ plugins {
 
 the<BasePluginConvention>().archivesBaseName = "kotlin-host-regex-gradle-plugin"
 
+kapt.includeCompileClasspath = false
+
 repositories {
     mavenCentral()
     jcenter()
