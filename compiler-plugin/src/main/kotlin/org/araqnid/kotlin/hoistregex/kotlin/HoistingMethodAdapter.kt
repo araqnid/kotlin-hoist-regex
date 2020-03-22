@@ -39,7 +39,7 @@ class HoistingMethodAdapter(
         private const val invokeSetOf = "visitMethodInsn:${Opcodes.INVOKESTATIC}:kotlin/collections/SetsKt:setOf:([Ljava/lang/Object;)Ljava/util/Set;:false"
         private const val bipushPrefix = "visitIntInsn:${Opcodes.BIPUSH}:"
 
-        suspend fun MatcherScope<String>.takeInsn(): String {
+        private suspend fun MatcherScope<String>.takeInsn(): String {
             while (true) {
                 val insn = take()
                 if (!insn.startsWith("visitLabel:") && !insn.startsWith("visitLineNumber:")) {
