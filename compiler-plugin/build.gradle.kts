@@ -28,7 +28,7 @@ dependencies {
     testInputJsImplementation(kotlin("stdlib-js"))
     compileOnly(kotlin("compiler-embeddable"))
     compileOnly("com.google.auto.service:auto-service:1.0.1")
-    kapt("com.google.auto.service:auto-service:1.0-rc4")
+    kapt("com.google.auto.service:auto-service:1.0.1")
     implementation(kotlin("stdlib-jdk8"))
     testImplementation(kotlin("test-junit"))
     testImplementation(kotlin("compiler-embeddable"))

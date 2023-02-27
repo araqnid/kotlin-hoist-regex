@@ -20,7 +20,7 @@ java {
 
 dependencies {
     compileOnly("com.google.auto.service:auto-service:1.0.1")
-    kapt("com.google.auto.service:auto-service:1.0-rc4")
+    kapt("com.google.auto.service:auto-service:1.0.1")
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("gradle-plugin-api"))
     testImplementation(kotlin("test-junit"))
