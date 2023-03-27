@@ -32,7 +32,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     testImplementation(kotlin("test-junit"))
     testImplementation(kotlin("compiler-embeddable"))
-    asmifier("org.ow2.asm:asm-util:7.3.1")
+    asmifier("org.ow2.asm:asm-util:9.5")
 }
 
 tasks {
